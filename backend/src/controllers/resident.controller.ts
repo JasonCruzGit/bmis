@@ -46,7 +46,8 @@ export const getResidents = async (req: AuthRequest, res: Response) => {
 
     // Filter by PWD status
     if (isPWD !== undefined) {
-      where.isPWD = isPWD === 'true' || isPWD === true;
+      const isPWDValue = typeof isPWD === 'string' ? isPWD === 'true' : Boolean(isPWD);
+      where.isPWD = isPWDValue;
     }
 
     // Filter by Youth (15-30 years old)

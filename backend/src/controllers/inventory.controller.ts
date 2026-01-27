@@ -26,10 +26,9 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
     
     // For low stock filtering, we need to fetch all items and filter in memory
     // because Prisma doesn't support comparing two fields directly in WHERE clause
-    let allItems;
     if (lowStock === 'true') {
       // Fetch all items matching other filters to properly filter by low stock
-      allItems = await prisma.inventoryItem.findMany({
+      const allItems = await prisma.inventoryItem.findMany({
         where,
         include: {
           _count: {
@@ -41,7 +40,7 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
       
       // Filter for low stock items (quantity <= minStock)
       const lowStockItems = allItems.filter(
-        (item: typeof allItems[number]) => item.quantity <= item.minStock
+        (item) => item.quantity <= item.minStock
       );
       
       // Apply pagination to filtered results

@@ -162,7 +162,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { email, firstName, lastName, role, isActive, password } = req.body;
+    const { email, firstName, lastName, role, barangay, isActive, password } = req.body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
