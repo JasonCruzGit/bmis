@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "npm install --include=dev && prisma generate && tsc --skipLibCheck",
-    "start": "prisma generate && prisma migrate deploy && node dist/server.js",
+    "start": "cd /opt/render/project/src/backend 2>/dev/null || cd $(dirname $0)/.. && npx prisma generate && npx prisma migrate deploy && node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
