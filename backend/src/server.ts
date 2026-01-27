@@ -171,6 +171,22 @@ async function ensureAdminPassword() {
 // Start server
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Run migrations on startup (for free tier without shell access)
+  try {
+    const { execSync } = require('child_process');
+    console.log('🔄 Running database migrations...');
+    execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: __dirname + '/..' });
+    console.log('✅ Migrations completed');
+    
+    // Generate Prisma client if needed
+    execSync('npx prisma generate', { stdio: 'inherit', cwd: __dirname + '/..' });
+    console.log('✅ Prisma client generated');
+  } catch (error: any) {
+    console.error('⚠️ Migration error (non-fatal):', error.message);
+    // Continue anyway - migrations might already be applied
+  }
+  
   // Reset admin password after server starts
   await ensureAdminPassword();
 });
