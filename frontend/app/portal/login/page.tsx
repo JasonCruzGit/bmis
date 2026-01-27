@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Calendar, Phone, LogIn, Lock, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import portalApi from '@/lib/portal-api'
@@ -12,6 +13,7 @@ export default function PortalLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [usePassword, setUsePassword] = useState(true) // Default to password mode
+  const [logoError, setLogoError] = useState(false)
   const [formData, setFormData] = useState({
     contactNo: '',
     password: '',
@@ -146,139 +148,181 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-            <LogIn className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, #1e40af 1px, transparent 0)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
+
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
+
+      <div className="relative max-w-md w-full">
+        {/* Hero Header Section */}
+        <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary-900 rounded-t-2xl overflow-hidden mb-0">
+          {/* Geometric Background Elements */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-64 h-64 border-2 border-white rounded-full -mr-32 -mt-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 border border-white rounded-full -ml-24 -mb-24"></div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Resident Portal</h1>
-          <p className="text-gray-600">Access your documents and services</p>
+
+          <div className="relative px-8 py-10 text-center">
+            <div className="inline-flex items-center justify-center p-3 bg-white rounded-xl border-2 border-white/30 mb-6 shadow-lg">
+              {logoError ? (
+                <LogIn className="h-8 w-8 text-primary-600" />
+              ) : (
+                <Image
+                  src="/logo.png"
+                  alt="El Nido Municipality Seal"
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                  priority
+                  onError={() => setLogoError(true)}
+                />
+              )}
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">Resident Portal</h1>
+            <p className="text-lg text-gray-300 font-light">Access your documents and services</p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contact Number
-            </label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="tel"
-                required
-                value={formData.contactNo}
-                onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
-                placeholder="09XX XXX XXXX"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+        {/* Login Form Card */}
+        <div className="bg-white rounded-b-2xl shadow-2xl border-2 border-gray-100 border-t-0 p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-3">
+                Contact Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="tel"
+                  required
+                  value={formData.contactNo}
+                  onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
+                  placeholder="09XX XXX XXXX"
+                  className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                />
+              </div>
             </div>
+
+            {usePassword ? (
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter your password"
+                    className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="mt-3 text-xs text-gray-600">
+                  First time?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsePassword(false)
+                      setFormData({ ...formData, password: '' })
+                    }}
+                    className="text-primary-600 hover:text-primary-700 font-semibold transition-colors"
+                  >
+                    Use date of birth instead
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Date of Birth
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="date"
+                    required
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                  />
+                </div>
+                <p className="mt-3 text-xs text-gray-600">
+                  Have a password?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsePassword(true)
+                      setFormData({ ...formData, dateOfBirth: '' })
+                    }}
+                    className="text-primary-600 hover:text-primary-700 font-semibold transition-colors"
+                  >
+                    Use password instead
+                  </button>
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 px-6 bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 text-white rounded-xl hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300 font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] disabled:hover:scale-100"
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t-2 border-gray-100 text-center">
+            <p className="text-sm text-gray-600 font-medium">
+              Need help? Contact the barangay office.
+            </p>
           </div>
-
-          {usePassword ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter your password"
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                First time?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsePassword(false)
-                    setFormData({ ...formData, password: '' })
-                  }}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Use date of birth instead
-                </button>
-              </p>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date of Birth
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="date"
-                  required
-                  value={formData.dateOfBirth}
-                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                Have a password?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsePassword(true)
-                    setFormData({ ...formData, dateOfBirth: '' })
-                  }}
-                  className="text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Use password instead
-                </button>
-              </p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Need help? Contact the barangay office.
-          </p>
         </div>
       </div>
 
       {/* Password Setup Modal */}
       {showPasswordSetup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-                <Lock className="h-8 w-8 text-white" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-gray-100 p-8 max-w-md w-full">
+            {/* Modal Header */}
+            <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary-900 rounded-xl overflow-hidden mb-6 -mt-8 -mx-8">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 right-0 w-32 h-32 border border-white rounded-full -mr-16 -mt-16"></div>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Set Your Password</h2>
-              <p className="text-gray-600">
-                For security, please set a password for your account. You'll use this password along with your contact number for future logins.
-              </p>
+              <div className="relative px-8 py-6 text-center">
+                <div className="inline-flex items-center justify-center p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 mb-4">
+                  <Lock className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Set Your Password</h2>
+                <p className="text-gray-300 text-sm">
+                  For security, please set a password for your account
+                </p>
+              </div>
             </div>
 
-            <form onSubmit={handleSetPassword} className="space-y-4">
+            <form onSubmit={handleSetPassword} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-900 mb-3">
                   New Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
@@ -286,12 +330,12 @@ export default function PortalLoginPage() {
                     onChange={(e) => setPasswordData({ ...passwordData, password: e.target.value })}
                     placeholder="Enter password (min. 6 characters)"
                     minLength={6}
-                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -299,11 +343,11 @@ export default function PortalLoginPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-bold text-gray-900 mb-3">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type={showPasswordConfirm ? 'text' : 'password'}
                     required
@@ -311,33 +355,33 @@ export default function PortalLoginPage() {
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                     placeholder="Confirm password"
                     minLength={6}
-                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full pl-12 pr-12 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPasswordConfirm ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-4 border-t-2 border-gray-100">
                 <button
                   type="button"
                   onClick={() => {
                     setShowPasswordSetup(false)
                     router.push('/portal/dashboard')
                   }}
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 font-semibold hover:shadow-md"
                 >
                   Skip for now
                 </button>
                 <button
                   type="submit"
                   disabled={settingPassword}
-                  className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 font-bold disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] disabled:hover:scale-100"
                 >
                   {settingPassword ? 'Setting...' : 'Set Password'}
                 </button>

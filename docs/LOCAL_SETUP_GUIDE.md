@@ -1,8 +1,8 @@
-# Local Setup Guide - Barangay Information System
+# Local Setup Guide - Barangay Management Information System
 
 ## Quick Start Guide
 
-This guide will help you set up and run the Barangay Information System on your local machine.
+This guide will help you set up and run the Barangay Management Information System on your local machine.
 
 ---
 
@@ -430,5 +430,7 @@ BIS/
 ---
 
 **Happy Coding! 🚀**
+
+
 
 

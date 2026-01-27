@@ -1,7 +1,7 @@
 {
   "name": "bis-backend",
   "version": "1.0.0",
-  "description": "Backend API for Barangay Information System",
+  "description": "Backend API for Barangay Management Information System",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "create-admin": "tsx scripts/create-admin.ts",
+    "create-evaluators": "tsx scripts/create-barangay-evaluators.ts",
     "reset-admin": "tsx scripts/reset-admin-password.ts",
     "test": "jest"
   },

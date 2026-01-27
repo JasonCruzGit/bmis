@@ -35,6 +35,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
           firstName: true,
           lastName: true,
           role: true,
+          barangay: true,
           isActive: true,
           lastLogin: true,
           createdAt: true,
@@ -92,14 +93,14 @@ export const getUser = async (req: AuthRequest, res: Response) => {
 // Create user
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password, firstName, lastName, role, isActive } = req.body;
+    const { email, password, firstName, lastName, role, barangay, isActive } = req.body;
 
     if (!email || !password || !firstName || !lastName || !role) {
       return res.status(400).json({ message: 'All required fields must be provided' });
     }
 
     // Validate role
-    const validRoles = ['ADMIN', 'BARANGAY_CHAIRMAN', 'SECRETARY', 'CPDO', 'TREASURER', 'SK', 'STAFF'];
+    const validRoles = ['ADMIN', 'BARANGAY_CHAIRMAN', 'BARANGAY_EVALUATOR', 'SECRETARY', 'CPDO', 'TREASURER', 'SK', 'STAFF'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
@@ -124,6 +125,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
         firstName,
         lastName,
         role,
+        barangay: barangay || null,
         isActive: isActive !== undefined ? isActive : true,
       },
       select: {
@@ -193,12 +195,13 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     if (firstName) updateData.firstName = firstName;
     if (lastName) updateData.lastName = lastName;
     if (role) {
-      const validRoles = ['ADMIN', 'BARANGAY_CHAIRMAN', 'SECRETARY', 'CPDO', 'TREASURER', 'SK', 'STAFF'];
+      const validRoles = ['ADMIN', 'BARANGAY_CHAIRMAN', 'BARANGAY_EVALUATOR', 'SECRETARY', 'CPDO', 'TREASURER', 'SK', 'STAFF'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid role' });
       }
       updateData.role = role;
     }
+    if (barangay !== undefined) updateData.barangay = barangay;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);

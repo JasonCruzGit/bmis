@@ -1,4 +1,4 @@
-# Barangay Information System - Setup Guide
+# Barangay Management Information System - Setup Guide
 
 ## Quick Start
 

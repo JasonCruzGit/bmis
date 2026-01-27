@@ -183,7 +183,7 @@ Role-based access control, audit trails, and encrypted data storage.
 
 Hi [Name],
 
-Welcome to the Barangay Information System! We're excited to help you transform your barangay operations.
+Welcome to the Barangay Management Information System! We're excited to help you transform your barangay operations.
 
 **Getting Started:**
 1. Complete your profile setup
@@ -272,7 +272,7 @@ The BIS Team
 
 Is your barangay still using paper forms and manual filing? There's a better way!
 
-The **Barangay Information System (BIS)** brings all your administrative tasks online:
+The **Barangay Management Information System (BIS)** brings all your administrative tasks online:
 
 ✨ Automated document generation (80% faster)
 🌐 Online resident portal (24/7 access)
@@ -314,7 +314,7 @@ Ready to see these results in your barangay?
 
 📋 **Tired of long queues and delayed services?**
 
-Say goodbye to manual paperwork! The **Barangay Information System** brings all your administrative tasks online:
+Say goodbye to manual paperwork! The **Barangay Management Information System** brings all your administrative tasks online:
 
 ✅ Fast document processing (15 min vs 2-3 hours)
 ✅ Online resident requests (24/7 access)
@@ -361,7 +361,7 @@ Ready to see similar results? Start your free trial today!
 **[Scene 2: Solution - 10 seconds]**
 *Show: BIS dashboard, document generation, resident portal*
 
-**Narrator:** "The Barangay Information System digitizes all your operations. Automated document generation, online resident portal, and real-time analytics."
+**Narrator:** "The Barangay Management Information System digitizes all your operations. Automated document generation, online resident portal, and real-time analytics."
 
 **[Scene 3: Benefits - 10 seconds]**
 *Show: Statistics, happy residents, efficient staff*
@@ -378,7 +378,7 @@ Ready to see similar results? Start your free trial today!
 ### **2-Minute Product Demo Video:**
 
 **[Introduction - 10 seconds]**
-"Hi, I'm [Name], and today I'll show you how the Barangay Information System can transform your barangay operations."
+"Hi, I'm [Name], and today I'll show you how the Barangay Management Information System can transform your barangay operations."
 
 **[Dashboard - 20 seconds]**
 "Here's the main dashboard. You can see real-time statistics, recent activities, and quick action buttons. Everything you need is right here."
@@ -403,7 +403,7 @@ Ready to see similar results? Start your free trial today!
 
 **[Large Logo]**
 
-# Barangay Information System
+# Barangay Management Information System
 
 **Complete Digital Solution for Modern Barangays**
 
@@ -414,7 +414,7 @@ Transform your operations. Serve residents better. Save time and money.
 ### **Inside Pages:**
 
 **What is BIS?**
-The Barangay Information System is a comprehensive platform that digitizes all barangay administrative processes, from resident management to document issuance.
+The Barangay Management Information System is a comprehensive platform that digitizes all barangay administrative processes, from resident management to document issuance.
 
 **Key Features:**
 - 12 integrated modules
@@ -457,7 +457,7 @@ Automate document processing, manage residents online, and serve better. Startin
 **Headline:** Transform Your Barangay Operations
 
 **Primary Text:**
-Stop wasting time on manual paperwork. The Barangay Information System automates document processing, provides online resident services, and gives you real-time insights.
+Stop wasting time on manual paperwork. The Barangay Management Information System automates document processing, provides online resident services, and gives you real-time insights.
 
 ✅ 80% faster document processing
 ✅ Online resident portal (24/7)
@@ -473,7 +473,7 @@ Stop wasting time on manual paperwork. The Barangay Information System automates
 ### **Cold Call Script:**
 
 **Opening:**
-"Hi [Name], this is [Your Name] from the Barangay Information System. I'm calling to see if you'd be interested in learning how we help barangays save 80% of their administrative time. Do you have 2 minutes?"
+"Hi [Name], this is [Your Name] from the Barangay Management Information System. I'm calling to see if you'd be interested in learning how we help barangays save 80% of their administrative time. Do you have 2 minutes?"
 
 **If Yes:**
 "Great! Many barangays struggle with manual paperwork and long processing times. BIS digitizes all operations - from resident management to document issuance. We've helped barangays reduce document processing from 2-3 hours to just 15 minutes. Would you like to see a quick demo?"
@@ -490,6 +490,8 @@ Stop wasting time on manual paperwork. The Barangay Information System automates
 ---
 
 *All marketing copy is ready to use. Customize with your specific contact information and branding.*
+
+
 
 
 

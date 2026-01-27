@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from 'react-query'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, Package } from 'lucide-react'
+import { ArrowLeft, Save, Package, Upload, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/store'
 
@@ -15,6 +15,8 @@ export default function NewInventoryPage() {
   const { hydrated } = useAuthStore()
   const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     itemName: '',
@@ -37,12 +39,55 @@ export default function NewInventoryPage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB')
+        return
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file')
+        return
+      }
+      setPhoto(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removePhoto = () => {
+    setPhoto(null)
+    setPhotoPreview(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      await api.post('/inventory', formData)
+      const submitData = new FormData()
+      
+      // Append all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value) {
+          submitData.append(key, value)
+        }
+      })
+
+      // Append photo if selected
+      if (photo) {
+        submitData.append('photo', photo)
+      }
+
+      await api.post('/inventory', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
 
       toast.success('Inventory item created successfully!')
       queryClient.invalidateQueries('inventory')
@@ -182,6 +227,51 @@ export default function NewInventoryPage() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Photo Upload */}
+          <div className="border-t border-gray-200 pt-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Item Photo</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Upload Photo (Optional)
+              </label>
+              {photoPreview ? (
+                <div className="space-y-3">
+                  <div className="relative inline-block">
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="w-48 h-48 object-cover rounded-lg border-2 border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Selected: <span className="font-medium">{photo.name}</span>
+                  </p>
+                </div>
+              ) : (
+                <label className="inline-flex items-center px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors shadow-md hover:shadow-lg font-medium">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Choose Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Maximum file size: 5MB. Supported formats: JPG, PNG, GIF
+              </p>
             </div>
           </div>
 

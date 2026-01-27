@@ -325,7 +325,7 @@ export default function PublicResidentPage() {
               <Shield className="h-5 w-5 text-white" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-gray-900">Barangay Information System</p>
+              <p className="text-sm font-bold text-gray-900">Barangay Management Information System</p>
               <p className="text-xs text-gray-500">Official Resident Information</p>
             </div>
           </div>

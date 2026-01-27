@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 import {
@@ -22,31 +23,45 @@ import {
   Shield,
   MessageSquare,
   User,
-  UserPlus
+  UserPlus,
+  AlertTriangle
 } from 'lucide-react'
 
 const menuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/residents', label: 'Residents', icon: Users },
-  { href: '/add-residents', label: 'Add Residents', icon: UserPlus },
-  { href: '/households', label: 'Households', icon: Home },
-  { href: '/documents', label: 'Documents', icon: FileText },
-  { href: '/incidents', label: 'Incidents', icon: AlertCircle },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/officials', label: 'Officials', icon: UserCheck },
-  { href: '/blotter', label: 'Blotter', icon: BookOpen },
-  { href: '/announcements', label: 'Announcements', icon: Megaphone },
-  { href: '/inventory', label: 'Inventory', icon: Package },
-  { href: '/resident-requests', label: 'Resident Requests', icon: MessageSquare },
-  { href: '/audit', label: 'Audit Logs', icon: ClipboardList },
-  { href: '/users', label: 'User Accounts', icon: Shield, adminOnly: true },
+  // Core
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, group: 'core' },
+  { href: '/residents', label: 'Residents', icon: Users, group: 'core' },
+  { href: '/add-residents', label: 'Add Residents', icon: UserPlus, group: 'core' },
+  { href: '/households', label: 'Households', icon: Home, group: 'core' },
+  // Management
+  { href: '/documents', label: 'Documents', icon: FileText, evaluatorRestricted: true, group: 'management' },
+  { href: '/incidents', label: 'Incidents', icon: AlertCircle, evaluatorRestricted: true, group: 'management' },
+  { href: '/projects', label: 'Projects', icon: FolderKanban, evaluatorRestricted: true, group: 'management' },
+  { href: '/officials', label: 'Officials', icon: UserCheck, evaluatorRestricted: true, group: 'management' },
+  { href: '/blotter', label: 'Blotter', icon: BookOpen, evaluatorRestricted: true, group: 'management' },
+  // Communication
+  { href: '/announcements', label: 'Announcements', icon: Megaphone, evaluatorRestricted: true, group: 'communication' },
+  { href: '/resident-requests', label: 'Resident Requests', icon: MessageSquare, evaluatorRestricted: true, group: 'communication' },
+  { href: '/complaints', label: 'Resident Complaints', icon: AlertTriangle, evaluatorRestricted: true, group: 'communication' },
+  // System
+  { href: '/inventory', label: 'Inventory', icon: Package, evaluatorRestricted: true, group: 'system' },
+  { href: '/audit', label: 'Audit Logs', icon: ClipboardList, evaluatorRestricted: true, group: 'system' },
+  { href: '/users', label: 'User Accounts', icon: Shield, adminOnly: true, group: 'system' },
 ]
+
+const groupLabels: Record<string, string> = {
+  core: 'Core',
+  management: 'Management',
+  communication: 'Communication',
+  system: 'System'
+}
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, clearAuth, hydrated, hydrate } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [logoError, setLogoError] = useState(false)
 
   useEffect(() => {
     if (!hydrated) {
@@ -72,63 +87,116 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        <div className={`fixed inset-y-0 left-0 flex w-72 flex-col bg-white shadow-2xl transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex h-20 items-center justify-between px-6 border-b border-gray-100 bg-gradient-to-r from-primary-600 to-primary-700">
-            <h1 className="text-xl font-bold text-white">Barangay Information System</h1>
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+        <div className={`fixed inset-y-0 left-0 flex w-72 flex-col h-full bg-white shadow-2xl transform transition-transform duration-300 overflow-hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="flex h-20 items-center justify-between px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
+            <div className="flex items-center gap-2.5 flex-1">
+              <div className="relative w-10 h-10 bg-white rounded-lg p-1 flex-shrink-0">
+                {logoError ? (
+                  <Shield className="h-7 w-7 text-primary-600" />
+                ) : (
+                  <Image
+                    src="/logo.png"
+                    alt="El Nido Municipality Seal"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                    onError={() => setLogoError(true)}
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xs font-bold text-white leading-tight">
+                  <span className="block">Barangay Management</span>
+                  <span className="block">Information System</span>
+                </h1>
+                <p className="text-[10px] text-primary-100 mt-0.5 font-medium">Management Portal</p>
+              </div>
+            </div>
             <button 
               onClick={() => setSidebarOpen(false)}
               className="p-2 rounded-lg hover:bg-white/20 transition-colors"
             >
-              <X className="h-6 w-6 text-white" />
+              <X className="h-5 w-5 text-white" />
             </button>
           </div>
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-            {menuItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
-                return null
-              }
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
-                  }`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className={`mr-3 h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                  <span className="flex-1">{item.label}</span>
-                  {isActive && (
-                    <div className="ml-2 h-2 w-2 rounded-full bg-white animate-pulse" />
-                  )}
-                </Link>
-              )
-            })}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 min-h-0">
+            <div className="px-3 py-3 space-y-5">
+              {['core', 'management', 'communication', 'system'].map((group) => {
+                const groupItems = menuItems.filter((item) => {
+                  if (item.group !== group) return false
+                  // Hide admin-only items from non-admin users
+                  if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
+                    return false
+                  }
+                  // Hide evaluator-restricted items from BARANGAY_EVALUATOR
+                  if (item.evaluatorRestricted && user?.role === 'BARANGAY_EVALUATOR') {
+                    return false
+                  }
+                  return true
+                })
+
+                if (groupItems.length === 0) return null
+
+                return (
+                  <div key={group} className="space-y-1.5">
+                    <div className="px-3 py-1">
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {groupLabels[group]}
+                      </h3>
+                    </div>
+                    <div className="space-y-1">
+                      {groupItems.map((item) => {
+                        const Icon = item.icon
+                        const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`group relative flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md shadow-primary-600/30'
+                                : 'text-gray-700 hover:bg-white hover:text-primary-700 hover:shadow-sm'
+                            }`}
+                            onClick={() => setSidebarOpen(false)}
+                          >
+                            <Icon className={`mr-3 h-4 w-4 transition-all duration-200 flex-shrink-0 ${
+                              isActive 
+                                ? 'text-white' 
+                                : 'text-gray-500 group-hover:text-primary-600'
+                            }`} />
+                            <span className="flex-1 truncate">{item.label}</span>
+                            {isActive && (
+                              <div className="ml-2 h-1.5 w-1.5 rounded-full bg-white flex-shrink-0" />
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </nav>
-          <div className="p-4 border-t border-gray-100 bg-gray-50">
-            <div className="flex items-center space-x-3 mb-3 p-3 bg-white rounded-lg shadow-sm">
-              <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
+          <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0">
+            <div className="flex items-center gap-2.5 mb-2.5 p-2.5 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role?.toLowerCase().replace('_', ' ')}</p>
+                <p className="text-xs text-gray-600 capitalize font-medium truncate">
+                  {user?.role?.toLowerCase().replace('_', ' ')}
+                </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:shadow-sm"
+              className="flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 bg-white group"
             >
-              <LogOut className="mr-3 h-5 w-5" />
+              <LogOut className="mr-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               Logout
             </button>
           </div>
@@ -137,68 +205,113 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-lg">
+        <div className="flex flex-col h-full bg-white border-r border-gray-200 shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="flex items-center h-20 px-6 border-b border-gray-100 bg-gradient-to-r from-primary-600 to-primary-700">
-            <h1 className="text-lg font-bold text-white leading-tight">
-              Barangay Information System
-            </h1>
+          <div className="flex items-center h-20 px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
+            <div className="flex items-center gap-2.5 flex-1">
+              <div className="relative w-10 h-10 bg-white rounded-lg p-1 flex-shrink-0">
+                {logoError ? (
+                  <Shield className="h-7 w-7 text-primary-600" />
+                ) : (
+                  <Image
+                    src="/logo.png"
+                    alt="El Nido Municipality Seal"
+                    width={32}
+                    height={32}
+                    className="object-contain"
+                    onError={() => setLogoError(true)}
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xs font-bold text-white leading-tight">
+                  <span className="block">Barangay Management</span>
+                  <span className="block">Information System</span>
+                </h1>
+                <p className="text-[10px] text-primary-100 mt-0.5 font-medium">Management Portal</p>
+              </div>
+            </div>
           </div>
           
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1.5 px-3 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-            {menuItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              // Only show admin-only items to ADMIN or BARANGAY_CHAIRMAN users
-              if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
-                return null
-              }
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group relative flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
-                  }`}
-                >
-                  <Icon className={`mr-3 h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                  <span className="flex-1">{item.label}</span>
-                  {isActive && (
-                    <div className="ml-2 h-2 w-2 rounded-full bg-white animate-pulse" />
-                  )}
-                  {!isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0 w-1 bg-primary-600 rounded-r-full transition-all duration-200 group-hover:h-8" />
-                  )}
-                </Link>
-              )
-            })}
+          {/* Navigation - Scrollable */}
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 min-h-0">
+            <div className="px-3 py-3 space-y-5">
+              {['core', 'management', 'communication', 'system'].map((group) => {
+                const groupItems = menuItems.filter((item) => {
+                  if (item.group !== group) return false
+                  // Hide admin-only items from non-admin users
+                  if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
+                    return false
+                  }
+                  // Hide evaluator-restricted items from BARANGAY_EVALUATOR
+                  if (item.evaluatorRestricted && user?.role === 'BARANGAY_EVALUATOR') {
+                    return false
+                  }
+                  return true
+                })
+
+                if (groupItems.length === 0) return null
+
+                return (
+                  <div key={group} className="space-y-1.5">
+                    <div className="px-3 py-1">
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        {groupLabels[group]}
+                      </h3>
+                    </div>
+                    <div className="space-y-1">
+                      {groupItems.map((item) => {
+                        const Icon = item.icon
+                        const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`group relative flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md shadow-primary-600/30'
+                                : 'text-gray-700 hover:bg-white hover:text-primary-700 hover:shadow-sm'
+                            }`}
+                          >
+                            <Icon className={`mr-3 h-4 w-4 transition-all duration-200 flex-shrink-0 ${
+                              isActive 
+                                ? 'text-white' 
+                                : 'text-gray-500 group-hover:text-primary-600'
+                            }`} />
+                            <span className="flex-1 truncate">{item.label}</span>
+                            {isActive && (
+                              <div className="ml-2 h-1.5 w-1.5 rounded-full bg-white flex-shrink-0" />
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </nav>
           
-          {/* User Section */}
-          <div className="p-4 border-t border-gray-100 bg-gradient-to-b from-gray-50 to-white">
-            <div className="flex items-center space-x-3 mb-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
-              <div className="flex-shrink-0">
-                <div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md">
-                  <User className="h-6 w-6 text-white" />
-                </div>
+          {/* User Section - Fixed at bottom */}
+          <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0">
+            <div className="flex items-center gap-2.5 mb-2.5 p-2.5 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500 capitalize mt-0.5">
+                <p className="text-xs text-gray-600 capitalize font-medium truncate">
                   {user?.role?.toLowerCase().replace('_', ' ')}
                 </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:shadow-sm border border-transparent hover:border-red-200"
+              className="flex items-center justify-center w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 border border-red-200 hover:border-red-300 bg-white group"
             >
-              <LogOut className="mr-3 h-5 w-5" />
+              <LogOut className="mr-2 h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               Logout
             </button>
           </div>
@@ -208,15 +321,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="lg:pl-72">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 flex h-16 bg-white border-b border-gray-200 shadow-sm lg:hidden">
+        <div className="sticky top-0 z-10 flex h-16 bg-white border-b-2 border-gray-200 shadow-md lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="px-4 text-gray-600 hover:text-gray-900 focus:outline-none transition-colors"
+            className="px-4 text-gray-700 hover:text-primary-600 focus:outline-none transition-colors hover:bg-gray-50"
           >
             <Menu className="h-6 w-6" />
           </button>
-          <div className="flex-1 flex items-center justify-center">
-            <h1 className="text-lg font-semibold text-primary-600">BIS</h1>
+          <div className="flex-1 flex items-center justify-center gap-2">
+            <div className="relative w-8 h-8 bg-white rounded p-0.5">
+              {logoError ? (
+                <Shield className="h-6 w-6 text-primary-600" />
+              ) : (
+                <Image
+                  src="/logo.png"
+                  alt="El Nido Municipality Seal"
+                  width={28}
+                  height={28}
+                  className="object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              )}
+            </div>
+            <h1 className="text-lg font-bold text-primary-700 tracking-tight">Barangay Management Information System</h1>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-# Barangay Information System (BIS)
+# Barangay Management Information System (BIS)
 ## Sales Pitch & Marketing Materials
 
 ---
@@ -7,7 +7,7 @@
 
 **Transform your barangay administration with a modern, all-in-one information management system.**
 
-The Barangay Information System (BIS) is a comprehensive, cloud-based solution designed specifically for Philippine barangays. It digitizes and streamlines all administrative processes, from resident management to document issuance, making barangay operations more efficient, transparent, and citizen-friendly.
+The Barangay Management Information System (BIS) is a comprehensive, cloud-based solution designed specifically for Philippine barangays. It digitizes and streamlines all administrative processes, from resident management to document issuance, making barangay operations more efficient, transparent, and citizen-friendly.
 
 ---
 
@@ -431,7 +431,7 @@ The Barangay Information System (BIS) is a comprehensive, cloud-based solution d
 
 Dear [Barangay Captain/Secretary],
 
-I hope this email finds you well. I'm reaching out to introduce the **Barangay Information System (BIS)**, a comprehensive digital solution designed to modernize barangay administration.
+I hope this email finds you well. I'm reaching out to introduce the **Barangay Management Information System (BIS)**, a comprehensive digital solution designed to modernize barangay administration.
 
 **The Challenge:**
 Many barangays struggle with manual paperwork, long processing times, and inefficient resident services. This leads to frustrated residents and overworked staff.
@@ -466,7 +466,7 @@ Best regards,
 
 Hi [Name],
 
-I wanted to follow up on my previous email about the Barangay Information System.
+I wanted to follow up on my previous email about the Barangay Management Information System.
 
 I understand you're busy, so I've prepared a **quick 5-minute video demo** that shows how BIS works: [video-link]
 
@@ -487,7 +487,7 @@ Best regards,
 
 ## 🎤 Elevator Pitch (30 seconds)
 
-*"The Barangay Information System is a complete digital platform that transforms how barangays serve their residents. It automates document issuance, manages resident data, and provides an online portal for residents to request services 24/7. Our clients save 80% of their administrative time and see a 95% resident satisfaction rate. Starting at just ₱15,000 per year, it pays for itself in 3-4 months. Would you like to see a quick demo?"*
+*"The Barangay Management Information System is a complete digital platform that transforms how barangays serve their residents. It automates document issuance, manages resident data, and provides an online portal for residents to request services 24/7. Our clients save 80% of their administrative time and see a 95% resident satisfaction rate. Starting at just ₱15,000 per year, it pays for itself in 3-4 months. Would you like to see a quick demo?"*
 
 ---
 
@@ -497,7 +497,7 @@ Best regards,
 
 🚀 **Digital Transformation for Philippine Barangays**
 
-Tired of manual paperwork and long processing times? The Barangay Information System (BIS) is here to help!
+Tired of manual paperwork and long processing times? The Barangay Management Information System (BIS) is here to help!
 
 ✨ **What BIS Offers:**
 - Automated document generation
@@ -520,7 +520,7 @@ Transform your barangay operations today!
 
 Say goodbye to long queues and delayed services! 
 
-The **Barangay Information System (BIS)** brings all your administrative tasks online:
+The **Barangay Management Information System (BIS)** brings all your administrative tasks online:
 ✅ Fast document processing
 ✅ Online resident requests
 ✅ Complete data management
@@ -628,6 +628,8 @@ Message us for a free demo! 📞
 
 *Last Updated: [Date]*
 *Version: 1.0*
+
+
 
 
 

@@ -45,7 +45,8 @@ uploads/
 public/uploads/
 
 # Prisma
-prisma/migrations/
+# Keep migrations for deployment
+# prisma/migrations/
 
 
 

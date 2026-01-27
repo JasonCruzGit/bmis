@@ -1,89 +1,123 @@
 # Barangay Information System (BIS)
 
-A comprehensive information system designed for efficient data management, fast retrieval, and secure operations for barangay administration.
+A comprehensive Barangay Management Information System for managing residents, documents, incidents, inventory, and more.
 
-## Features
-
-1. **Resident Information Module** - Manage resident profiles with complete demographic data
-2. **Barangay Document Issuance** - Generate certificates (Indigency, Residency, Clearance, etc.)
-3. **Household Profiling** - Group residents by household with location tracking
-4. **Incident and Case Reporting** - Log and track incidents and complaints
-5. **Barangay Projects & Programs** - Manage ongoing and completed projects
-6. **Barangay Officials & Employee Directory** - Track officials and staff
-7. **Barangay Blotter System** - Log and track blotter entries
-8. **Financial & Budget Management** - Manage budget, expenses, and allocations
-9. **Activity & Announcement Board** - Post announcements and events
-10. **Disaster & Emergency Response Module** - Track disasters and relief distribution
-11. **Inventory Management** - Track equipment and supplies with QR codes
-12. **Audit Trail & User Access Control** - Role-based access with activity logs
-
-## Tech Stack
-
-- **Frontend**: Next.js 14, React, Tailwind CSS
-- **Backend**: Node.js, Express
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Authentication**: JWT
-- **File Storage**: Local (configurable for cloud)
-
-## Project Structure
-
-```
-BIS/
-├── frontend/          # Next.js frontend application
-├── backend/           # Express backend API
-├── docs/              # Documentation
-└── README.md
-```
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ 
 - PostgreSQL 14+
-- Git
+- npm or yarn
 
-### Installation
+### Local Development
 
-1. Clone the repository
-2. Install dependencies:
+1. **Clone the repository**
    ```bash
-   npm install
-   cd frontend && npm install
-   cd ../backend && npm install
+   git clone https://github.com/YOUR_USERNAME/barangay-information-system.git
+   cd barangay-information-system
    ```
 
-3. Set up environment variables:
-   - Copy `backend/.env.example` to `backend/.env`
-   - Copy `frontend/.env.example` to `frontend/.env.local`
-   - Configure database and JWT secrets
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-4. Set up the database:
+3. **Set up environment variables**
+   
+   Backend (`backend/.env`):
+   ```env
+   PORT=5000
+   NODE_ENV=development
+   DATABASE_URL=postgresql://user:password@localhost:5432/bis_db
+   JWT_SECRET=your-secret-key
+   FRONTEND_URL=http://localhost:3000
+   ```
+   
+   Frontend (`frontend/.env.local`):
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
+
+4. **Set up database**
    ```bash
    cd backend
    npx prisma migrate dev
    npx prisma generate
    ```
 
-5. Run the development servers:
+5. **Create admin user**
    ```bash
+   npm run create-admin
+   ```
+
+6. **Start development servers**
+   ```bash
+   # From root directory
    npm run dev
    ```
 
-## Deployment
+   This will start:
+   - Backend API on http://localhost:5000
+   - Frontend on http://localhost:3000
 
-See `docs/DEPLOYMENT.md` for detailed deployment instructions for Vercel (frontend) and Render/Supabase (backend).
+## 📦 Deployment
 
-## Documentation
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions to:
+- **GitHub**: Code repository
+- **Vercel**: Frontend hosting
+- **Render**: Backend API and PostgreSQL database
 
-- API Documentation: `docs/API.md`
-- Database Schema: `docs/SCHEMA.md`
-- ER Diagram: `docs/ER_DIAGRAM.md`
+## 🏗️ Project Structure
 
-## License
+```
+BIS/
+├── backend/          # Express.js API server
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── utils/
+│   └── prisma/       # Database schema and migrations
+├── frontend/         # Next.js frontend application
+│   ├── app/          # Next.js app directory
+│   ├── components/   # React components
+│   └── lib/          # Utilities and API clients
+└── docs/             # Documentation
+```
 
-MIT
+## 🔑 Features
 
+- **Resident Management**: Complete resident registration and management
+- **Document Management**: Issue and track barangay documents
+- **Incident Management**: Record and track incidents and complaints
+- **Inventory Management**: Track barangay equipment and supplies
+- **Financial Records**: Manage financial transactions
+- **Project Management**: Track barangay projects
+- **Announcements**: Publish and manage announcements
+- **Resident Portal**: Self-service portal for residents
+- **Audit Logs**: Complete audit trail of all actions
 
+## 🛠️ Tech Stack
 
+**Backend:**
+- Express.js
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- JWT Authentication
+
+**Frontend:**
+- Next.js 14
+- React 18
+- TypeScript
+- Tailwind CSS
+- React Query
+
+## 📝 License
+
+Private - All rights reserved
+
+## 👥 Support
+
+For issues and questions, please contact the development team.

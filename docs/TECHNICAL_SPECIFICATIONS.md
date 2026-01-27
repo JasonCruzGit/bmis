@@ -1,4 +1,4 @@
-# Barangay Information System - Technical Specifications
+# Barangay Management Information System - Technical Specifications
 
 ## Architecture Overview
 **Type:** Full-Stack Web Application  

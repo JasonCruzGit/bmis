@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, Upload, X, User } from 'lucide-react'
+import { ArrowLeft, Save, Upload, X, User, Building2, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/store'
 import { getFileUrl } from '@/lib/utils'
@@ -28,12 +28,16 @@ export default function EditResidentPage() {
     dateOfBirth: '',
     sex: '',
     civilStatus: '',
+    barangay: '',
     address: '',
     contactNo: '',
     occupation: '',
     education: '',
     householdId: '',
     residencyStatus: 'NEW',
+    lengthOfStayYears: '',
+    lengthOfStayMonths: '',
+    isPWD: false,
   })
 
   const [idPhotoFile, setIdPhotoFile] = useState<File | null>(null)
@@ -49,6 +53,20 @@ export default function EditResidentPage() {
       enabled: !!residentId,
       onSuccess: (data) => {
         if (data) {
+          // Parse lengthOfStay string to extract years and months
+          let years = ''
+          let months = ''
+          if (data.lengthOfStay) {
+            const yearsMatch = data.lengthOfStay.match(/(\d+)\s*year/i)
+            const monthsMatch = data.lengthOfStay.match(/(\d+)\s*month/i)
+            if (yearsMatch) {
+              years = yearsMatch[1]
+            }
+            if (monthsMatch) {
+              months = monthsMatch[1]
+            }
+          }
+          
           setFormData({
             firstName: data.firstName || '',
             middleName: data.middleName || '',
@@ -57,12 +75,16 @@ export default function EditResidentPage() {
             dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : '',
             sex: data.sex || '',
             civilStatus: data.civilStatus || '',
+            barangay: data.barangay || '',
             address: data.address || '',
             contactNo: data.contactNo || '',
             occupation: data.occupation || '',
             education: data.education || '',
             householdId: data.householdId || '',
             residencyStatus: data.residencyStatus || 'NEW',
+            lengthOfStayYears: years,
+            lengthOfStayMonths: months,
+            isPWD: data.isPWD || false,
           })
           if (data.idPhoto) {
             setIdPhotoPreview(getFileUrl(data.idPhoto))
@@ -85,8 +107,9 @@ export default function EditResidentPage() {
   }, [hydrated, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type } = e.target
+    const checked = (e.target as HTMLInputElement).checked
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,12 +144,36 @@ export default function EditResidentPage() {
     try {
       const submitData = new FormData()
       
-      // Append all form fields
+      // Combine years and months into lengthOfStay
+      const lengthOfStayParts: string[] = []
+      if (formData.lengthOfStayYears && formData.lengthOfStayYears !== '0') {
+        const years = parseInt(formData.lengthOfStayYears)
+        lengthOfStayParts.push(`${years} ${years === 1 ? 'year' : 'years'}`)
+      }
+      if (formData.lengthOfStayMonths && formData.lengthOfStayMonths !== '0') {
+        const months = parseInt(formData.lengthOfStayMonths)
+        lengthOfStayParts.push(`${months} ${months === 1 ? 'month' : 'months'}`)
+      }
+      const lengthOfStay = lengthOfStayParts.length > 0 ? lengthOfStayParts.join(', ') : ''
+      
+      // Append all form fields (excluding lengthOfStayYears and lengthOfStayMonths)
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) {
-          submitData.append(key, value)
+        if (key === 'lengthOfStayYears' || key === 'lengthOfStayMonths') {
+          return // Skip these, we'll add lengthOfStay instead
+        }
+        if (value !== '' && value !== null && value !== undefined) {
+          if (typeof value === 'boolean') {
+            submitData.append(key, value.toString())
+          } else {
+            submitData.append(key, value)
+          }
         }
       })
+      
+      // Append combined lengthOfStay if it has a value
+      if (lengthOfStay) {
+        submitData.append('lengthOfStay', lengthOfStay)
+      }
 
       // Append photo if selected
       if (idPhotoFile) {
@@ -311,6 +358,60 @@ export default function EditResidentPage() {
                   <option value="TRANSFERRED">Transferred</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="h-4 w-4 inline mr-1.5" />
+                  Length of Stay
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <select
+                      name="lengthOfStayYears"
+                      value={formData.lengthOfStayYears}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="">Years</option>
+                      {Array.from({ length: 101 }, (_, i) => (
+                        <option key={i} value={i}>
+                          {i} {i === 1 ? 'year' : 'years'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <select
+                      name="lengthOfStayMonths"
+                      value={formData.lengthOfStayMonths}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="">Months</option>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i} value={i}>
+                          {i} {i === 1 ? 'month' : 'months'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">How long the resident has been staying in the barangay</p>
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary-300 transition-all duration-200 cursor-pointer bg-white">
+                  <input
+                    type="checkbox"
+                    name="isPWD"
+                    checked={formData.isPWD}
+                    onChange={handleInputChange}
+                    className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-gray-700">Person with Disability (PWD)</span>
+                    <p className="text-xs text-gray-500 mt-1">Check if the resident is a person with disability</p>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -318,18 +419,37 @@ export default function EditResidentPage() {
           <div className="border-t border-gray-200 pt-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address <span className="text-red-500">*</span>
+                  Barangay <span className="text-red-500">*</span>
                 </label>
-                <textarea
-                  name="address"
-                  value={formData.address}
+                <select
+                  name="barangay"
+                  value={formData.barangay}
                   onChange={handleInputChange}
                   required
-                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
+                >
+                  <option value="">Select Barangay</option>
+                  <option value="Bagong Bayan">Bagong Bayan</option>
+                  <option value="Buena Suerte">Buena Suerte</option>
+                  <option value="Barotuan">Barotuan</option>
+                  <option value="Bebeladan">Bebeladan</option>
+                  <option value="Corong-corong">Corong-corong</option>
+                  <option value="Mabini">Mabini</option>
+                  <option value="Manlag">Manlag</option>
+                  <option value="Masagana">Masagana</option>
+                  <option value="New Ibajay">New Ibajay</option>
+                  <option value="Pasadeña">Pasadeña</option>
+                  <option value="Maligaya">Maligaya</option>
+                  <option value="San Fernando">San Fernando</option>
+                  <option value="Sibaltan">Sibaltan</option>
+                  <option value="Teneguiban">Teneguiban</option>
+                  <option value="Villa Libertad">Villa Libertad</option>
+                  <option value="Villa Paz">Villa Paz</option>
+                  <option value="Bucana">Bucana</option>
+                  <option value="Aberawan">Aberawan</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -342,6 +462,19 @@ export default function EditResidentPage() {
                   onChange={handleInputChange}
                   required
                   placeholder="09XX XXX XXXX"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  required
+                  rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>

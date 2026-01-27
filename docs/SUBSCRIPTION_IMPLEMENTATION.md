@@ -1,7 +1,7 @@
 # Subscription System Implementation Guide
 
 ## Overview
-This document outlines the recommended approach for implementing an annual subscription-based system for the Barangay Information System.
+This document outlines the recommended approach for implementing an annual subscription-based system for the Barangay Management Information System.
 
 ## Architecture Recommendations
 

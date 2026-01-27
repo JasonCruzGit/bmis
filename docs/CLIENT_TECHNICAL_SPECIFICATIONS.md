@@ -1,4 +1,4 @@
-# Barangay Information System
+# Barangay Management Information System
 ## Technical Specifications Document
 
 **Version:** 1.0  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The Barangay Information System (BIS) is a comprehensive, cloud-based digital platform designed to modernize barangay administration and enhance service delivery to residents. The system provides secure, efficient, and user-friendly tools for managing all aspects of barangay operations, from resident records to document issuance, project management, and financial tracking.
+The Barangay Management Information System (BIS) is a comprehensive, cloud-based digital platform designed to modernize barangay administration and enhance service delivery to residents. The system provides secure, efficient, and user-friendly tools for managing all aspects of barangay operations, from resident records to document issuance, project management, and financial tracking.
 
 ---
 
@@ -405,5 +405,5 @@ For technical inquiries, demonstrations, or additional information, please conta
 
 ---
 
-*This document provides a comprehensive overview of the Barangay Information System's technical capabilities, features, and requirements. For detailed implementation plans or custom requirements, please contact our technical team.*
+*This document provides a comprehensive overview of the Barangay Management Information System's technical capabilities, features, and requirements. For detailed implementation plans or custom requirements, please contact our technical team.*
 

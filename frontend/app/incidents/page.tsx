@@ -19,15 +19,18 @@ import {
   ChevronRight,
   X,
   FileText,
-  Clock
+  Clock,
+  Shield
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getFileUrl } from '@/lib/utils'
 import { useAuthStore } from '@/lib/store'
 
 export default function IncidentsPage() {
-  const { hydrated } = useAuthStore()
+  const router = useRouter()
+  const { hydrated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
@@ -52,12 +55,15 @@ export default function IncidentsPage() {
   )
 
   const { data: stats } = useQuery('incidents-stats', async () => {
-    const { data } = await api.get('/incidents?limit=1')
+    // Fetch all incidents to calculate accurate stats
+    const { data } = await api.get('/incidents?limit=1000')
+    const incidents = data.incidents || []
+    
     return {
-      total: data.pagination?.total || 0,
-      pending: 0,
-      inProgress: 0,
-      resolved: 0,
+      total: data.pagination?.total || incidents.length,
+      pending: incidents.filter((incident: any) => incident.status === 'PENDING').length,
+      inProgress: incidents.filter((incident: any) => incident.status === 'IN_PROGRESS').length,
+      resolved: incidents.filter((incident: any) => incident.status === 'RESOLVED').length,
     }
   })
 
@@ -66,6 +72,7 @@ export default function IncidentsPage() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries('incidents')
+        queryClient.invalidateQueries('incidents-stats')
         toast.success('Incident status updated successfully')
       },
       onError: () => {
@@ -106,6 +113,12 @@ export default function IncidentsPage() {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
+  useEffect(() => {
+    if (hydrated && user?.role === 'BARANGAY_EVALUATOR') {
+      router.push('/dashboard')
+    }
+  }, [hydrated, user, router])
+
   if (!hydrated) {
     return (
       <Layout>
@@ -116,11 +129,25 @@ export default function IncidentsPage() {
     )
   }
 
+  if (user?.role === 'BARANGAY_EVALUATOR') {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You do not have permission to access this page.</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-primary-500/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
@@ -571,6 +598,12 @@ export default function IncidentsPage() {
                   </div>
                 )}
                 <div className="mt-6 pt-6 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={() => setShowViewModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Close
+                  </button>
                   <Link
                     href={`/incidents/${selectedIncident.id}/edit`}
                     className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-center transition-colors"

@@ -30,11 +30,33 @@ import { useAuthStore } from '@/lib/store'
 const USER_ROLES = [
   { value: 'ADMIN', label: 'Administrator', color: 'bg-red-100 text-red-800' },
   { value: 'BARANGAY_CHAIRMAN', label: 'Barangay Chairman', color: 'bg-red-100 text-red-800' },
+  { value: 'BARANGAY_EVALUATOR', label: 'Barangay Evaluator', color: 'bg-orange-100 text-orange-800' },
   { value: 'SECRETARY', label: 'Secretary', color: 'bg-blue-100 text-blue-800' },
   { value: 'CPDO', label: 'CPDO', color: 'bg-green-100 text-green-800' },
   { value: 'TREASURER', label: 'Treasurer', color: 'bg-yellow-100 text-yellow-800' },
   { value: 'SK', label: 'SK', color: 'bg-purple-100 text-purple-800' },
   { value: 'STAFF', label: 'Staff', color: 'bg-gray-100 text-gray-800' },
+]
+
+const BARANGAYS = [
+  'Bagong Bayan',
+  'Buena Suerte',
+  'Barotuan',
+  'Bebeladan',
+  'Corong-corong',
+  'Mabini',
+  'Manlag',
+  'Masagana',
+  'New Ibajay',
+  'Pasadeña',
+  'Maligaya',
+  'San Fernando',
+  'Sibaltan',
+  'Teneguiban',
+  'Villa Libertad',
+  'Villa Paz',
+  'Bucana',
+  'Aberawan',
 ]
 
 export default function UsersPage() {
@@ -51,6 +73,7 @@ export default function UsersPage() {
     firstName: '',
     lastName: '',
     role: 'STAFF',
+    barangay: '',
     isActive: true,
   })
   const [loading, setLoading] = useState(false)
@@ -85,6 +108,7 @@ export default function UsersPage() {
           firstName: '',
           lastName: '',
           role: 'STAFF',
+          barangay: '',
           isActive: true,
         })
       },
@@ -159,6 +183,7 @@ export default function UsersPage() {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      barangay: user.barangay || '',
       isActive: user.isActive,
     })
     setShowEditModal(true)
@@ -199,7 +224,7 @@ export default function UsersPage() {
     <Layout>
       <div className="space-y-6">
         {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-primary-500/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
@@ -275,6 +300,9 @@ export default function UsersPage() {
                       Role
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Barangay
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -309,6 +337,11 @@ export default function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${getRoleColor(userItem.role)}`}>
                           {getRoleLabel(userItem.role)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-600">
+                          {userItem.barangay || '—'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -483,7 +516,7 @@ export default function UsersPage() {
                     <select
                       required
                       value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value, barangay: e.target.value === 'BARANGAY_EVALUATOR' ? formData.barangay : '' })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     >
                       {USER_ROLES.map((role) => (
@@ -493,6 +526,26 @@ export default function UsersPage() {
                       ))}
                     </select>
                   </div>
+                  {formData.role === 'BARANGAY_EVALUATOR' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Barangay *
+                      </label>
+                      <select
+                        required
+                        value={formData.barangay}
+                        onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">Select Barangay</option>
+                        {BARANGAYS.map((barangay) => (
+                          <option key={barangay} value={barangay}>
+                            {barangay}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="flex items-center">
                     <input
                       type="checkbox"
@@ -601,7 +654,7 @@ export default function UsersPage() {
                     <select
                       required
                       value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value, barangay: e.target.value === 'BARANGAY_EVALUATOR' ? formData.barangay : '' })}
                       disabled={selectedUser.id === user?.id}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100"
                     >
@@ -615,6 +668,26 @@ export default function UsersPage() {
                       <p className="mt-1 text-xs text-gray-500">You cannot change your own role</p>
                     )}
                   </div>
+                  {formData.role === 'BARANGAY_EVALUATOR' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Barangay *
+                      </label>
+                      <select
+                        required
+                        value={formData.barangay}
+                        onChange={(e) => setFormData({ ...formData, barangay: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">Select Barangay</option>
+                        {BARANGAYS.map((barangay) => (
+                          <option key={barangay} value={barangay}>
+                            {barangay}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="flex items-center">
                     <input
                       type="checkbox"
@@ -701,6 +774,12 @@ export default function UsersPage() {
                     <p className="text-xs text-gray-500">Email Address</p>
                     <p className="text-sm font-medium text-gray-900">{selectedUser.email}</p>
                   </div>
+                  {selectedUser.barangay && (
+                    <div>
+                      <p className="text-xs text-gray-500">Barangay</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedUser.barangay}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-gray-500">Last Login</p>
                     <p className="text-sm font-medium text-gray-900">

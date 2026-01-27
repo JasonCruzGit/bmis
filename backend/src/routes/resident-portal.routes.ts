@@ -7,6 +7,7 @@ import {
   createDocumentRequest,
   getRequestDetails,
   submitComplaint,
+  getMyComplaints,
   getPublicAnnouncements,
   getDocumentTypes,
   paymentCallback,
@@ -28,6 +29,7 @@ router.get('/documents', getMyDocuments);
 router.get('/requests', getMyRequests);
 router.get('/requests/:id', getRequestDetails);
 router.post('/requests', createDocumentRequest);
+router.get('/complaints', getMyComplaints);
 router.post('/complaints', submitComplaint);
 router.post('/payment/callback', paymentCallback);
 

@@ -18,12 +18,52 @@ const generateResidentQRCode = (qrCode: string): string => {
 
 export const getResidents = async (req: AuthRequest, res: Response) => {
   try {
-    const { page = '1', limit = '50', archived = 'false' } = req.query;
+    const { 
+      page = '1', 
+      limit = '50', 
+      archived = 'false',
+      residencyStatus,
+      civilStatus,
+      isPWD,
+      youth,
+      barangay
+    } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const where: any = {
       isArchived: archived === 'true'
     };
+
+    // Filter by residency status
+    if (residencyStatus) {
+      where.residencyStatus = residencyStatus as string;
+    }
+
+    // Filter by civil status
+    if (civilStatus) {
+      where.civilStatus = civilStatus as string;
+    }
+
+    // Filter by PWD status
+    if (isPWD !== undefined) {
+      where.isPWD = isPWD === 'true' || isPWD === true;
+    }
+
+    // Filter by Youth (15-30 years old)
+    if (youth === 'true') {
+      const today = new Date();
+      const maxDate = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
+      const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+      where.dateOfBirth = {
+        gte: minDate,
+        lte: maxDate
+      };
+    }
+
+    // Filter by Barangay
+    if (barangay) {
+      where.barangay = barangay as string;
+    }
 
     const [residents, total] = await Promise.all([
       prisma.resident.findMany({
@@ -87,12 +127,15 @@ export const createResident = async (req: AuthRequest, res: Response) => {
       dateOfBirth,
       sex,
       civilStatus,
+      barangay,
       address,
       contactNo,
       occupation,
       education,
       householdId,
-      residencyStatus
+      residencyStatus,
+      lengthOfStay,
+      isPWD
     } = req.body;
 
     const idPhoto = req.file ? `/uploads/residents/${req.file.filename}` : null;
@@ -112,10 +155,13 @@ export const createResident = async (req: AuthRequest, res: Response) => {
           dateOfBirth: new Date(dateOfBirth),
           sex,
           civilStatus,
+          barangay: barangay || null,
           address,
           contactNo,
           occupation: occupation || null,
           education: education || null,
+          lengthOfStay: lengthOfStay || null,
+          isPWD: isPWD === 'true' || isPWD === true,
           householdId: householdId || null,
           residencyStatus: residencyStatus || 'NEW',
           idPhoto,
@@ -138,10 +184,13 @@ export const createResident = async (req: AuthRequest, res: Response) => {
             dateOfBirth: new Date(dateOfBirth),
             sex,
             civilStatus,
+            barangay: barangay || null,
             address,
             contactNo,
             occupation: occupation || null,
             education: education || null,
+            lengthOfStay: lengthOfStay || null,
+            isPWD: isPWD === 'true' || isPWD === true,
             householdId: householdId || null,
             residencyStatus: residencyStatus || 'NEW',
             idPhoto
@@ -181,6 +230,11 @@ export const updateResident = async (req: AuthRequest, res: Response) => {
 
     if (updateData.dateOfBirth) {
       updateData.dateOfBirth = new Date(updateData.dateOfBirth);
+    }
+
+    // Handle isPWD boolean conversion
+    if (updateData.isPWD !== undefined) {
+      updateData.isPWD = updateData.isPWD === 'true' || updateData.isPWD === true;
     }
 
     const oldResident = await prisma.resident.findUnique({ where: { id } });

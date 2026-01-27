@@ -29,7 +29,9 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
+import { Shield } from 'lucide-react'
 
 const INVENTORY_LOG_TYPES = [
   { value: 'ADD', label: 'Add Stock', color: 'bg-green-100 text-green-800', icon: PlusCircle },
@@ -40,7 +42,8 @@ const INVENTORY_LOG_TYPES = [
 ]
 
 export default function InventoryPage() {
-  const { hydrated } = useAuthStore()
+  const router = useRouter()
+  const { hydrated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
@@ -137,6 +140,12 @@ export default function InventoryPage() {
 
   const isLowStock = (item: any) => item.quantity <= item.minStock
 
+  useEffect(() => {
+    if (hydrated && user?.role === 'BARANGAY_EVALUATOR') {
+      router.push('/dashboard')
+    }
+  }, [hydrated, user, router])
+
   if (!hydrated) {
     return (
       <Layout>
@@ -147,11 +156,25 @@ export default function InventoryPage() {
     )
   }
 
+  if (user?.role === 'BARANGAY_EVALUATOR') {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You do not have permission to access this page.</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-primary-500/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
@@ -211,7 +234,7 @@ export default function InventoryPage() {
                   setSearchQuery(e.target.value)
                   setPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             <div className="flex gap-2">
@@ -263,7 +286,7 @@ export default function InventoryPage() {
                       setPage(1)
                     }}
                     placeholder="Filter by category..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   />
                 </div>
                 <div>
@@ -338,7 +361,7 @@ export default function InventoryPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <div className="flex-1">
-                              <div className="text-sm font-semibold text-gray-900">
+                              <div className={`text-sm font-semibold ${isLowStock(item) ? 'text-red-600' : 'text-gray-900'}`}>
                                 {item.itemName}
                               </div>
                               {isLowStock(item) && (
@@ -354,11 +377,11 @@ export default function InventoryPage() {
                           <div className="text-sm text-gray-600">{item.category}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className={`text-sm font-medium ${isLowStock(item) ? 'text-red-600' : 'text-gray-900'}`}>
                             {item.quantity} {item.unit}
                           </div>
                           {item.minStock > 0 && (
-                            <div className="text-xs text-gray-500">
+                            <div className={`text-xs ${isLowStock(item) ? 'text-red-500' : 'text-gray-500'}`}>
                               Min: {item.minStock} {item.unit}
                             </div>
                           )}
@@ -919,7 +942,7 @@ function InventoryReleaseModal({ item, onClose, onSuccess }: { item: any; onClos
                     }}
                     onFocus={() => setShowOfficialSearch(true)}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   />
                   {showOfficialSearch && officials.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -958,7 +981,7 @@ function InventoryReleaseModal({ item, onClose, onSuccess }: { item: any; onClos
                 min="1"
                 max={item.quantity}
                 placeholder={`Enter quantity (max: ${item.quantity} ${item.unit})`}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             <div>
@@ -970,7 +993,7 @@ function InventoryReleaseModal({ item, onClose, onSuccess }: { item: any; onClos
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={3}
                 placeholder="Additional notes about the release..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             <div className="flex gap-3 pt-4">
@@ -1043,8 +1066,8 @@ function InventoryLogModal({ item, onClose, onSuccess }: { item: any; onClose: (
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                  >
                 {INVENTORY_LOG_TYPES.map(type => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
@@ -1061,7 +1084,7 @@ function InventoryLogModal({ item, onClose, onSuccess }: { item: any; onClose: (
                 required
                 min="1"
                 placeholder={`Enter quantity in ${item.unit}`}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             {(formData.type === 'RELEASE' || formData.type === 'RETURN') && (
@@ -1074,7 +1097,7 @@ function InventoryLogModal({ item, onClose, onSuccess }: { item: any; onClose: (
                   value={formData.releasedTo}
                   onChange={(e) => setFormData(prev => ({ ...prev, releasedTo: e.target.value }))}
                   placeholder="Person or department name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
             )}
@@ -1087,7 +1110,7 @@ function InventoryLogModal({ item, onClose, onSuccess }: { item: any; onClose: (
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 rows={3}
                 placeholder="Additional notes..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             <div className="flex gap-3 pt-4">

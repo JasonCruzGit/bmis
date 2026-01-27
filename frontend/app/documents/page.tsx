@@ -18,14 +18,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Printer,
-  X
+  X,
+  Shield
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
 
 export default function DocumentsPage() {
-  const { hydrated } = useAuthStore()
+  const router = useRouter()
+  const { hydrated, user } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
@@ -111,6 +114,12 @@ export default function DocumentsPage() {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
+  useEffect(() => {
+    if (hydrated && user?.role === 'BARANGAY_EVALUATOR') {
+      router.push('/dashboard')
+    }
+  }, [hydrated, user, router])
+
   if (!hydrated) {
     return (
       <Layout>
@@ -121,11 +130,25 @@ export default function DocumentsPage() {
     )
   }
 
+  if (user?.role === 'BARANGAY_EVALUATOR') {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You do not have permission to access this page.</p>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-primary-500/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">

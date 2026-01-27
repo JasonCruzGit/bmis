@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { useSearchParams } from 'next/navigation'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import toast from 'react-hot-toast'
@@ -24,27 +25,44 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreVertical,
-  QrCode
+  QrCode,
+  ChevronDown
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { getFileUrl } from '@/lib/utils'
+import * as XLSX from 'xlsx'
 
 export default function ResidentsPage() {
+  const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showFilters, setShowFilters] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [civilStatusFilter, setCivilStatusFilter] = useState<string>('')
+  const [pwdFilter, setPwdFilter] = useState<string>('')
+  const [youthFilter, setYouthFilter] = useState<boolean>(false)
+  const [barangayFilter, setBarangayFilter] = useState<string>('')
   const [selectedResident, setSelectedResident] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrCodeData, setQrCodeData] = useState<string | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
+  const [showExportDropdown, setShowExportDropdown] = useState(false)
   const queryClient = useQueryClient()
 
+  // Handle URL query parameters (e.g., from dashboard breakdown)
+  useEffect(() => {
+    const barangayParam = searchParams.get('barangay')
+    if (barangayParam) {
+      setBarangayFilter(barangayParam)
+      setShowFilters(true) // Auto-show filters when a barangay is pre-selected
+    }
+  }, [searchParams])
+
   const { data: residentsData, isLoading } = useQuery(
-    ['residents', page, searchQuery, statusFilter],
+    ['residents', page, searchQuery, statusFilter, civilStatusFilter, pwdFilter, youthFilter, barangayFilter],
     async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -54,7 +72,19 @@ export default function ResidentsPage() {
         params.append('q', searchQuery)
       }
       if (statusFilter) {
-        // Note: API might need to support status filter
+        params.append('residencyStatus', statusFilter)
+      }
+      if (civilStatusFilter) {
+        params.append('civilStatus', civilStatusFilter)
+      }
+      if (pwdFilter) {
+        params.append('isPWD', pwdFilter)
+      }
+      if (youthFilter) {
+        params.append('youth', 'true')
+      }
+      if (barangayFilter) {
+        params.append('barangay', barangayFilter)
       }
       const { data } = await api.get(`/residents?${params}`)
       return data
@@ -70,6 +100,180 @@ export default function ResidentsPage() {
       transferred: 0
     }
   })
+
+  const fetchResidentsForExport = async () => {
+    const params = new URLSearchParams({
+      limit: '10000', // Get all residents
+    })
+    if (searchQuery) {
+      params.append('q', searchQuery)
+    }
+    if (statusFilter) {
+      params.append('residencyStatus', statusFilter)
+    }
+    if (civilStatusFilter) {
+      params.append('civilStatus', civilStatusFilter)
+    }
+    if (pwdFilter) {
+      params.append('isPWD', pwdFilter)
+    }
+    if (youthFilter) {
+      params.append('youth', 'true')
+    }
+    if (barangayFilter) {
+      params.append('barangay', barangayFilter)
+    }
+    
+    const { data } = await api.get(`/residents?${params}`)
+    return data?.residents || []
+  }
+
+  const prepareExportData = (residents: any[]) => {
+    return residents.map((resident: any) => {
+      const age = resident.dateOfBirth 
+        ? Math.floor((new Date().getTime() - new Date(resident.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        : ''
+      
+      return {
+        'ID': resident.id || '',
+        'First Name': resident.firstName || '',
+        'Middle Name': resident.middleName || '',
+        'Last Name': resident.lastName || '',
+        'Suffix': resident.suffix || '',
+        'Date of Birth': resident.dateOfBirth ? format(new Date(resident.dateOfBirth), 'yyyy-MM-dd') : '',
+        'Age': age,
+        'Sex': resident.sex || '',
+        'Civil Status': (resident.civilStatus || '').replace(/_/g, ' '),
+        'Barangay': resident.barangay || '',
+        'Address': resident.address || '',
+        'Contact Number': resident.contactNo || '',
+        'Occupation': resident.occupation || '',
+        'Education': (resident.education || '').replace(/_/g, ' '),
+        'Length of Stay': resident.lengthOfStay || '',
+        'PWD Status': resident.isPWD ? 'Yes' : 'No',
+        'Residency Status': (resident.residencyStatus || '').replace(/_/g, ' '),
+        'Household': resident.household?.householdNumber || '',
+        'Date Registered': resident.createdAt ? format(new Date(resident.createdAt), 'yyyy-MM-dd HH:mm:ss') : ''
+      }
+    })
+  }
+
+  const handleExportCSV = async () => {
+    try {
+      toast.loading('Exporting to CSV...')
+      setShowExportDropdown(false)
+      
+      const residents = await fetchResidentsForExport()
+      
+      if (residents.length === 0) {
+        toast.dismiss()
+        toast.error('No residents to export')
+        return
+      }
+      
+      const exportData = prepareExportData(residents)
+      const headers = Object.keys(exportData[0])
+      const csvRows = [headers.join(',')]
+      
+      exportData.forEach((row: any) => {
+        const values = headers.map(header => {
+          const value = row[header]?.toString() || ''
+          return `"${value.replace(/"/g, '""')}"`
+        })
+        csvRows.push(values.join(','))
+      })
+      
+      const csvContent = csvRows.join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `residents_export_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.dismiss()
+      toast.success(`Successfully exported ${residents.length} residents to CSV`)
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error('Failed to export to CSV')
+      console.error('CSV Export error:', error)
+    }
+  }
+
+  const handleExportExcel = async () => {
+    try {
+      toast.loading('Exporting to Excel...')
+      setShowExportDropdown(false)
+      
+      const residents = await fetchResidentsForExport()
+      
+      if (residents.length === 0) {
+        toast.dismiss()
+        toast.error('No residents to export')
+        return
+      }
+      
+      const exportData = prepareExportData(residents)
+      
+      // Create a new workbook
+      const workbook = XLSX.utils.book_new()
+      
+      // Convert data to worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData)
+      
+      // Set column widths
+      const columnWidths = [
+        { wch: 36 }, // ID
+        { wch: 15 }, // First Name
+        { wch: 15 }, // Middle Name
+        { wch: 15 }, // Last Name
+        { wch: 10 }, // Suffix
+        { wch: 12 }, // Date of Birth
+        { wch: 5 },  // Age
+        { wch: 8 },  // Sex
+        { wch: 12 }, // Civil Status
+        { wch: 20 }, // Barangay
+        { wch: 40 }, // Address
+        { wch: 15 }, // Contact Number
+        { wch: 20 }, // Occupation
+        { wch: 15 }, // Education
+        { wch: 15 }, // Length of Stay
+        { wch: 12 }, // PWD Status
+        { wch: 15 }, // Residency Status
+        { wch: 15 }, // Household
+        { wch: 20 }, // Date Registered
+      ]
+      worksheet['!cols'] = columnWidths
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Residents')
+      
+      // Generate Excel file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      
+      // Download file
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `residents_export_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.dismiss()
+      toast.success(`Successfully exported ${residents.length} residents to Excel`)
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error('Failed to export to Excel')
+      console.error('Excel Export error:', error)
+    }
+  }
 
   const archiveMutation = useMutation(
     (id: string) => api.patch(`/residents/${id}/archive`),
@@ -107,7 +311,7 @@ export default function ResidentsPage() {
     <Layout>
       <div className="space-y-6">
         {/* Banner Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 sm:p-8">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-primary-500/20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center">
@@ -118,13 +322,6 @@ export default function ResidentsPage() {
                 <p className="text-white/90 text-sm sm:text-base">Manage and view resident information</p>
               </div>
             </div>
-            <Link
-              href="/residents/new"
-              className="inline-flex items-center px-5 py-2.5 bg-white text-primary-600 rounded-lg hover:bg-gray-50 transition-colors shadow-md font-semibold whitespace-nowrap"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Resident
-            </Link>
           </div>
         </div>
 
@@ -189,14 +386,14 @@ export default function ResidentsPage() {
                   setSearchQuery(e.target.value)
                   setPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters || statusFilter
+                  showFilters || statusFilter || civilStatusFilter || pwdFilter || youthFilter || barangayFilter
                     ? 'bg-primary-50 border-primary-300 text-primary-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -222,17 +419,48 @@ export default function ResidentsPage() {
                   <Grid className="h-4 w-4" />
                 </button>
               </div>
-              <button className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </button>
+                
+                {showExportDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowExportDropdown(false)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                      <button
+                        onClick={handleExportCSV}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center border-b border-gray-100"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Export as CSV
+                      </button>
+                      <button
+                        onClick={handleExportExcel}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                      >
+                        <FileText className="h-4 w-4 mr-2 text-green-600" />
+                        Export as Excel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Filter Panel */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Residency Status
@@ -243,7 +471,7 @@ export default function ResidentsPage() {
                       setStatusFilter(e.target.value)
                       setPage(1)
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   >
                     <option value="">All Status</option>
                     <option value="NEW">New</option>
@@ -255,18 +483,94 @@ export default function ResidentsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Civil Status
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                  <select
+                    value={civilStatusFilter}
+                    onChange={(e) => {
+                      setCivilStatusFilter(e.target.value)
+                      setPage(1)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
                     <option value="">All</option>
                     <option value="SINGLE">Single</option>
                     <option value="MARRIED">Married</option>
                     <option value="WIDOWED">Widowed</option>
                     <option value="DIVORCED">Divorced</option>
+                    <option value="SEPARATED">Separated</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    PWD Status
+                  </label>
+                  <select
+                    value={pwdFilter}
+                    onChange={(e) => {
+                      setPwdFilter(e.target.value)
+                      setPage(1)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">All</option>
+                    <option value="true">PWD</option>
+                    <option value="false">Non-PWD</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Barangay
+                  </label>
+                  <select
+                    value={barangayFilter}
+                    onChange={(e) => {
+                      setBarangayFilter(e.target.value)
+                      setPage(1)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                  >
+                    <option value="">All Barangays</option>
+                    <option value="Bagong Bayan">Bagong Bayan</option>
+                    <option value="Buena Suerte">Buena Suerte</option>
+                    <option value="Barotuan">Barotuan</option>
+                    <option value="Bebeladan">Bebeladan</option>
+                    <option value="Corong-corong">Corong-corong</option>
+                    <option value="Mabini">Mabini</option>
+                    <option value="Manlag">Manlag</option>
+                    <option value="Masagana">Masagana</option>
+                    <option value="New Ibajay">New Ibajay</option>
+                    <option value="Pasadeña">Pasadeña</option>
+                    <option value="Maligaya">Maligaya</option>
+                    <option value="San Fernando">San Fernando</option>
+                    <option value="Sibaltan">Sibaltan</option>
+                    <option value="Teneguiban">Teneguiban</option>
+                    <option value="Villa Libertad">Villa Libertad</option>
+                    <option value="Villa Paz">Villa Paz</option>
+                    <option value="Bucana">Bucana</option>
+                    <option value="Aberawan">Aberawan</option>
                   </select>
                 </div>
                 <div className="flex items-end">
+                  <label className="flex items-center gap-2 p-3 border-2 border-gray-300 rounded-lg hover:border-primary-300 transition-all cursor-pointer bg-white w-full">
+                    <input
+                      type="checkbox"
+                      checked={youthFilter}
+                      onChange={(e) => {
+                        setYouthFilter(e.target.checked)
+                        setPage(1)
+                      }}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Youth (15-30 years old)</span>
+                  </label>
+                </div>
+                <div className="flex items-end sm:col-span-2 lg:col-span-1">
                   <button
                     onClick={() => {
                       setStatusFilter('')
+                      setCivilStatusFilter('')
+                      setPwdFilter('')
+                      setYouthFilter(false)
+                      setBarangayFilter('')
                       setShowFilters(false)
                     }}
                     className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
@@ -480,15 +784,8 @@ export default function ResidentsPage() {
             <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No residents found</h3>
             <p className="text-gray-500 mb-4">
-              {searchQuery ? 'Try adjusting your search criteria' : 'Get started by adding your first resident'}
+              {searchQuery ? 'Try adjusting your search criteria' : 'No residents available'}
             </p>
-            <Link
-              href="/residents/new"
-              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Resident
-            </Link>
           </div>
         )}
 

@@ -6,7 +6,7 @@
 ## 🎯 The 5-Minute Pitch
 
 ### **Opening (30 seconds):**
-"Hi [Name], I'm [Your Name] from the Barangay Information System. We help barangays save 80% of their administrative time by digitizing all operations. Do you have 5 minutes to see how it works?"
+"Hi [Name], I'm [Your Name] from the Barangay Management Information System. We help barangays save 80% of their administrative time by digitizing all operations. Do you have 5 minutes to see how it works?"
 
 ### **Problem (1 minute):**
 "Most barangays I talk to face the same challenges:
@@ -389,6 +389,8 @@ Does this sound like something that would help your barangay?"
 ---
 
 *Use this guide as a quick reference during sales conversations. Customize based on your experience and feedback.*
+
+
 
 
 

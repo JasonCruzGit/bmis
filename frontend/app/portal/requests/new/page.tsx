@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import portalApi from '@/lib/portal-api'
 import toast from 'react-hot-toast'
-import { ArrowLeft, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, FileText, CheckCircle, CheckCircle2, Clock, CreditCard, FileCheck, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 export default function NewRequestPage() {
@@ -64,84 +64,149 @@ export default function NewRequestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-white">
+      {/* Hero Header */}
+      <header className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary-900 overflow-hidden">
+        {/* Geometric Background Elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 border-2 border-white rounded-full -mr-48 -mt-48"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 border border-white rounded-full -ml-32 -mb-32"></div>
+        </div>
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Link
             href="/portal/dashboard"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-5 w-5 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Request Document</h1>
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+              <FileText className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2 tracking-tight">
+                Request Document
+              </h1>
+              <p className="text-lg text-gray-300 font-light">
+                Submit a new document request to the barangay office
+              </p>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Document Type *
-              </label>
-              <select
-                required
-                value={formData.documentType}
-                onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">Select document type</option>
-                {documentTypes?.map((type: any) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 -mt-8">
+        {/* Form Card */}
+        <div className="bg-white rounded-xl shadow-xl border-2 border-gray-100 overflow-hidden mb-8">
+          <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4">
+            <h2 className="text-lg font-bold text-white">Document Request Form</h2>
+          </div>
+          <div className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Document Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.documentType}
+                  onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
+                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                >
+                  <option value="">Select document type</option>
+                  {documentTypes?.map((type: any) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Purpose (Optional)
-              </label>
-              <textarea
-                value={formData.purpose}
-                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                rows={4}
-                placeholder="Please specify the purpose of this document..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Purpose <span className="text-gray-500 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  value={formData.purpose}
+                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                  rows={5}
+                  placeholder="Please specify the purpose of this document..."
+                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 resize-none"
+                />
+              </div>
 
-            <div className="flex gap-4 pt-4">
-              <Link
-                href="/portal/dashboard"
-                className="flex-1 px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-center transition-colors"
-              >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={createMutation.isLoading || !formData.documentType}
-                className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {createMutation.isLoading ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </div>
-          </form>
+              <div className="flex gap-4 pt-6 border-t-2 border-gray-100">
+                <Link
+                  href="/portal/dashboard"
+                  className="flex-1 px-6 py-3.5 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 text-center transition-all duration-200 font-semibold hover:shadow-md"
+                >
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={createMutation.isLoading || !formData.documentType}
+                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transform hover:scale-[1.02] disabled:hover:scale-100"
+                >
+                  {createMutation.isLoading ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <CheckCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-blue-900 mb-1">Request Process</h3>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Your request will be reviewed by barangay staff</li>
-                <li>You will be notified once your request is approved or rejected</li>
-                <li>If approved, you can pay the required fees online</li>
-                <li>Once payment is confirmed, your document will be processed</li>
-              </ul>
+        {/* Request Process Card */}
+        <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 border-b-2 border-primary-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary-600 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg">Request Process</h3>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
+                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                  <FileCheck className="h-5 w-5 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 mb-1">Review Stage</h4>
+                  <p className="text-sm text-gray-600">Your request will be reviewed by barangay staff</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
+                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                  <Bell className="h-5 w-5 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 mb-1">Notification</h4>
+                  <p className="text-sm text-gray-600">You will be notified once your request is approved or rejected</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
+                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                  <CreditCard className="h-5 w-5 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 mb-1">Payment</h4>
+                  <p className="text-sm text-gray-600">If approved, you can pay the required fees online</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
+                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                  <FileText className="h-5 w-5 text-primary-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 mb-1">Processing</h4>
+                  <p className="text-sm text-gray-600">Once payment is confirmed, your document will be processed</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

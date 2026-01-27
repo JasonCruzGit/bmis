@@ -95,9 +95,21 @@ export const residentLogin = async (req: Request, res: Response) => {
       resident: {
         id: resident.id,
         firstName: resident.firstName,
+        middleName: resident.middleName,
         lastName: resident.lastName,
-        contactNo: resident.contactNo,
+        suffix: resident.suffix,
+        dateOfBirth: resident.dateOfBirth,
+        sex: resident.sex,
+        civilStatus: resident.civilStatus,
+        barangay: resident.barangay,
         address: resident.address,
+        contactNo: resident.contactNo,
+        occupation: resident.occupation,
+        education: resident.education,
+        lengthOfStay: resident.lengthOfStay,
+        isPWD: resident.isPWD,
+        idPhoto: resident.idPhoto,
+        residencyStatus: resident.residencyStatus,
       },
       requiresPasswordSetup: !hasPassword, // Flag to indicate if password needs to be set
     };
@@ -484,6 +496,59 @@ export const submitComplaint = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Get resident complaints
+export const getMyComplaints = async (req: Request, res: Response) => {
+  try {
+    const residentId = (req as any).residentId;
+    if (!residentId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { page = '1', limit = '100' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [complaints, total] = await Promise.all([
+      prisma.incident.findMany({
+        where: {
+          complainantId: residentId,
+          narrative: { contains: '[COMPLAINT/REQUEST]', mode: 'insensitive' },
+        },
+        skip,
+        take: parseInt(limit as string),
+        orderBy: { incidentDate: 'desc' },
+        select: {
+          id: true,
+          incidentNumber: true,
+          narrative: true,
+          status: true,
+          incidentDate: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.incident.count({
+        where: {
+          complainantId: residentId,
+          narrative: { contains: '[COMPLAINT/REQUEST]', mode: 'insensitive' },
+        },
+      }),
+    ]);
+
+    res.json({
+      complaints,
+      pagination: {
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        total,
+        pages: Math.ceil(total / parseInt(limit as string)),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error in getMyComplaints:', error);
+    res.status(500).json({ message: error.message || 'Internal server error' });
   }
 };
 

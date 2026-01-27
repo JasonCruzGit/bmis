@@ -1,7 +1,7 @@
 {
   "name": "barangay-information-system",
   "version": "1.0.0",
-  "description": "Comprehensive Barangay Information System",
+  "description": "Comprehensive Barangay Management Information System",
   "private": true,
   "workspaces": [
     "frontend",

@@ -35,6 +35,8 @@ const storage = multer.diskStorage({
       type = 'officials';
     } else if (checkPath.includes('/financial')) {
       type = 'financial';
+    } else if (checkPath.includes('/inventory')) {
+      type = 'inventory';
     } else {
       type = req.params.type || 'general';
     }

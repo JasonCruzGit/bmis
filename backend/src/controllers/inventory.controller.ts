@@ -24,6 +24,42 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
       ];
     }
     
+    // For low stock filtering, we need to fetch all items and filter in memory
+    // because Prisma doesn't support comparing two fields directly in WHERE clause
+    let allItems;
+    if (lowStock === 'true') {
+      // Fetch all items matching other filters to properly filter by low stock
+      allItems = await prisma.inventoryItem.findMany({
+        where,
+        include: {
+          _count: {
+            select: { logs: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      // Filter for low stock items (quantity <= minStock)
+      const lowStockItems = allItems.filter(
+        (item: typeof allItems[number]) => item.quantity <= item.minStock
+      );
+      
+      // Apply pagination to filtered results
+      const total = lowStockItems.length;
+      const paginatedItems = lowStockItems.slice(skip, skip + parseInt(limit as string));
+      
+      return res.json({
+        items: paginatedItems,
+        pagination: {
+          page: parseInt(page as string),
+          limit: parseInt(limit as string),
+          total,
+          pages: Math.ceil(total / parseInt(limit as string))
+        }
+      });
+    }
+    
+    // Normal query when lowStock is not requested
     const items = await prisma.inventoryItem.findMany({
       where,
       skip,
@@ -36,23 +72,15 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Filter low stock items if requested
-    let filteredItems = items;
-    if (lowStock === 'true') {
-      filteredItems = items.filter(
-        (item: typeof items[number]) => item.quantity <= item.minStock
-      );
-    }
-
     const total = await prisma.inventoryItem.count({ where });
 
     res.json({
-      items: filteredItems,
+      items,
       pagination: {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
-        total: lowStock === 'true' ? filteredItems.length : total,
-        pages: Math.ceil((lowStock === 'true' ? filteredItems.length : total) / parseInt(limit as string))
+        total,
+        pages: Math.ceil(total / parseInt(limit as string))
       }
     });
   } catch (error: any) {
@@ -104,6 +132,12 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       notes
     } = req.body;
 
+    // Handle photo upload
+    let photoPath = null;
+    if (req.file) {
+      photoPath = `/uploads/inventory/${req.file.filename}`;
+    }
+
     // Generate QR code
     const qrData = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const qrCodePath = path.join(__dirname, '../../uploads/qrcodes', `${qrData}.png`);
@@ -112,7 +146,10 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       fs.mkdirSync(path.dirname(qrCodePath), { recursive: true });
     }
 
-    await generateQR(qrData, qrCodePath);
+    // Generate QR code with URL pointing to public page
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const qrCodeUrl = `${frontendUrl}/public/inventory/${qrData}`;
+    await generateQR(qrCodeUrl, qrCodePath);
 
     const item = await prisma.inventoryItem.create({
       data: {
@@ -123,7 +160,8 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
         minStock: parseInt(minStock) || 0,
         location: location || null,
         notes: notes || null,
-        qrCode: qrData
+        qrCode: qrData,
+        ...(photoPath && { photo: photoPath })
       }
     });
 
@@ -149,6 +187,20 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
 
     if (updateData.quantity) updateData.quantity = parseInt(updateData.quantity);
     if (updateData.minStock) updateData.minStock = parseInt(updateData.minStock);
+
+    // Handle photo upload
+    if (req.file) {
+      updateData.photo = `/uploads/inventory/${req.file.filename}`;
+      
+      // Delete old photo if exists
+      const oldItem = await prisma.inventoryItem.findUnique({ where: { id } });
+      if (oldItem?.photo) {
+        const oldPhotoPath = path.join(__dirname, '../../', oldItem.photo);
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+    }
 
     const oldItem = await prisma.inventoryItem.findUnique({ where: { id } });
     
@@ -335,8 +387,44 @@ export const generateQRCode = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'Item does not have a QR code' });
     }
 
-    const qrCodeDataURL = await generateQRCodeDataURL(item.qrCode);
-    res.json({ qrCode: qrCodeDataURL, itemName: item.itemName });
+    // Generate QR code with URL that points to public page
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const qrCodeUrl = `${frontendUrl}/public/inventory/${item.qrCode}`;
+    const qrCodeDataURL = await generateQRCodeDataURL(qrCodeUrl);
+    res.json({ qrCode: qrCodeDataURL, itemName: item.itemName, qrCodeUrl });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Public endpoint to get inventory item by QR code (no auth required)
+export const getInventoryItemByQRCode = async (req: any, res: Response) => {
+  try {
+    const { qrCode } = req.params;
+
+    const item = await prisma.inventoryItem.findUnique({
+      where: { qrCode },
+      include: {
+        logs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            creator: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    res.json(item);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
