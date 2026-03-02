@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Phone, AlertCircle, Shield, Heart, Flame, Home, Building2 } from 'lucide-react'
+import { Phone, AlertCircle, Shield, Heart, Building2 } from 'lucide-react'
+import PortalHeader from '@/components/PortalHeader'
 
 export default function EmergencyContactsPage() {
   const router = useRouter()
@@ -80,32 +81,28 @@ export default function EmergencyContactsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/portal/dashboard"
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-            </Link>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <PortalHeader />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Phone className="h-7 w-7 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Emergency Contacts</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Emergency Contacts</h1>
               <p className="text-sm text-gray-600 mt-1">Important contact numbers for emergencies</p>
             </div>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Important Notice */}
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6">
+        <div className="bg-red-50/80 backdrop-blur-sm border-l-4 border-red-500 rounded-2xl p-5 mb-6 shadow-lg">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-red-900 mb-1">Emergency Hotline: 911</h3>
+              <h3 className="font-bold text-red-900 mb-1 text-lg">Emergency Hotline: 911</h3>
               <p className="text-sm text-red-800">
                 For life-threatening emergencies, dial 911 immediately. This is the national emergency hotline that connects you to police, fire, and medical services.
               </p>
@@ -120,7 +117,7 @@ export default function EmergencyContactsPage() {
             return (
               <div
                 key={categoryIndex}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
               >
                 <div className={`${category.color} px-6 py-4`}>
                   <div className="flex items-center gap-3">
@@ -164,7 +161,7 @@ export default function EmergencyContactsPage() {
         </div>
 
         {/* Additional Information */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-2xl p-6">
+        <div className="mt-8 bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-2xl p-6 shadow-lg">
           <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-600" />
             Important Reminders
@@ -192,4 +189,6 @@ export default function EmergencyContactsPage() {
     </div>
   )
 }
+
+
 

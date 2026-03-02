@@ -9,6 +9,7 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     role: string;
+    barangay: string | null;
   };
 }
 
@@ -28,7 +29,7 @@ export const authenticate = async (
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true, isActive: true }
+      select: { id: true, email: true, role: true, barangay: true, isActive: true }
     });
 
     if (!user || !user.isActive) {
@@ -38,7 +39,8 @@ export const authenticate = async (
     req.user = {
       id: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      barangay: user.barangay
     };
 
     next();

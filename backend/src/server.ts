@@ -23,6 +23,7 @@ import inventoryRoutes from './routes/inventory.routes';
 import auditRoutes from './routes/audit.routes';
 import residentPortalRoutes from './routes/resident-portal.routes';
 import residentRequestsRoutes from './routes/resident-requests.routes';
+import directMessageRoutes from './routes/direct-message.routes';
 
 dotenv.config();
 
@@ -85,6 +86,7 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/disasters', disasterRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/direct-messages', directMessageRoutes);
 
 // Resident Portal Routes
 try {
@@ -169,34 +171,42 @@ async function ensureAdminPassword() {
   }
 }
 
-// Start server
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`Server running on port ${PORT}`);
-  
-  // Run migrations on startup (for free tier without shell access)
-  try {
-    const { execSync } = require('child_process');
-    console.log('🔄 Running database migrations...');
-    execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: __dirname + '/..' });
-    console.log('✅ Migrations completed');
-    
-    // Generate Prisma client if needed
-    execSync('npx prisma generate', { stdio: 'inherit', cwd: __dirname + '/..' });
-    console.log('✅ Prisma client generated');
-  } catch (error: any) {
-    console.error('⚠️ Migration error (non-fatal):', error.message);
-    // Continue anyway - migrations might already be applied
-  }
-  
-  // Reset admin password after server starts
-  await ensureAdminPassword();
-});
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
+if (!isVercel) {
+  // Start server for local/dev and traditional hosting.
+  app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Run migrations on startup (for free tier without shell access)
+    // Only in production or if explicitly requested - skip in dev to avoid restart loops
+    if (process.env.NODE_ENV === 'production' || process.env.RUN_MIGRATIONS === 'true') {
+      try {
+        const { execSync } = require('child_process');
+        console.log('🔄 Running database migrations...');
+        execSync('npx prisma migrate deploy', { stdio: 'inherit', cwd: __dirname + '/..' });
+        console.log('✅ Migrations completed');
+      } catch (error: any) {
+        console.error('⚠️ Migration error (non-fatal):', error.message);
+        // Continue anyway - migrations might already be applied
+      }
+    } else {
+      console.log('⏭️ Skipping migrations in development mode (use RUN_MIGRATIONS=true to run)');
+    }
+    
+    // Don't generate Prisma client on startup in dev mode - it causes restart loops with tsx watch
+    // Prisma client should be generated via: npm run prisma:generate
+    
+    // Reset admin password after server starts
+    await ensureAdminPassword();
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
 
 export default app;
 

@@ -21,9 +21,17 @@ export default function NewAnnouncementPage() {
     isPinned: false,
     startDate: '',
     endDate: '',
+    targetBarangays: [] as string[],
   })
   const [files, setFiles] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
+
+  const BARANGAYS = [
+    'Bagong Bayan', 'Buena Suerte', 'Barotuan', 'Bebeladan', 'Corong-corong',
+    'Mabini', 'Manlag', 'Masagana', 'New Ibajay', 'Pasadeña', 'Maligaya',
+    'San Fernando', 'Sibaltan', 'Teneguiban', 'Villa Libertad', 'Villa Paz',
+    'Bucana', 'Aberawan'
+  ]
 
   useEffect(() => {
     if (hydrated && !user) {
@@ -34,9 +42,7 @@ export default function NewAnnouncementPage() {
   const createMutation = useMutation(
     async (data: FormData) => {
       const response = await api.post('/announcements', data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        timeout: 30000, // 30 second timeout for file uploads
       })
       return response.data
     },
@@ -62,6 +68,7 @@ export default function NewAnnouncementPage() {
     formDataToSend.append('content', formData.content)
     formDataToSend.append('type', formData.type)
     formDataToSend.append('isPinned', formData.isPinned.toString())
+    formDataToSend.append('targetBarangays', JSON.stringify(formData.targetBarangays))
     if (formData.startDate) {
       formDataToSend.append('startDate', formData.startDate)
     }
@@ -113,7 +120,7 @@ export default function NewAnnouncementPage() {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="Enter announcement title"
               />
             </div>
@@ -127,7 +134,7 @@ export default function NewAnnouncementPage() {
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows={8}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 placeholder="Enter announcement content"
               />
             </div>
@@ -141,10 +148,10 @@ export default function NewAnnouncementPage() {
                   required
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="GENERAL">General</option>
-                  <option value="URGENT">Urgent</option>
+                  <option value="EMERGENCY">Emergency</option>
                   <option value="NOTICE">Notice</option>
                   <option value="EVENT">Event</option>
                 </select>
@@ -163,6 +170,39 @@ export default function NewAnnouncementPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Target Barangays (Optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Leave empty to send to all barangays. Select specific barangays to target the announcement.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border border-gray-300 rounded-lg bg-gray-50 max-h-64 overflow-y-auto">
+                {BARANGAYS.map((barangay) => (
+                  <label key={barangay} className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={formData.targetBarangays.includes(barangay)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({ ...formData, targetBarangays: [...formData.targetBarangays, barangay] })
+                        } else {
+                          setFormData({ ...formData, targetBarangays: formData.targetBarangays.filter(b => b !== barangay) })
+                        }
+                      }}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">{barangay}</span>
+                  </label>
+                ))}
+              </div>
+              {formData.targetBarangays.length > 0 && (
+                <p className="text-sm text-primary-600 mt-2">
+                  Selected: {formData.targetBarangays.length} barangay(s)
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -172,7 +212,7 @@ export default function NewAnnouncementPage() {
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
 
@@ -184,7 +224,7 @@ export default function NewAnnouncementPage() {
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
             </div>

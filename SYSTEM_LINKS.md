@@ -286,3 +286,5 @@
 
 - File uploads are served statically from `/uploads` directory
 
+
+

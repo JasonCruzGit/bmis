@@ -41,6 +41,13 @@ const INVENTORY_LOG_TYPES = [
   { value: 'ADJUSTMENT', label: 'Adjustment', color: 'bg-purple-100 text-purple-800', icon: Activity },
 ]
 
+const BARANGAYS = [
+  'Bagong Bayan', 'Buena Suerte', 'Barotuan', 'Bebeladan', 'Corong-corong',
+  'Mabini', 'Manlag', 'Masagana', 'New Ibajay', 'Pasadeña', 'Maligaya',
+  'San Fernando', 'Sibaltan', 'Teneguiban', 'Villa Libertad', 'Villa Paz',
+  'Bucana', 'Aberawan'
+]
+
 export default function InventoryPage() {
   const router = useRouter()
   const { hydrated, user } = useAuthStore()
@@ -49,6 +56,7 @@ export default function InventoryPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [showFilters, setShowFilters] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [barangayFilter, setBarangayFilter] = useState<string>('')
   const [lowStockFilter, setLowStockFilter] = useState<boolean>(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -59,7 +67,7 @@ export default function InventoryPage() {
   const queryClient = useQueryClient()
 
   const { data: inventoryData, isLoading } = useQuery(
-    ['inventory', page, searchQuery, categoryFilter, lowStockFilter],
+    ['inventory', page, searchQuery, categoryFilter, barangayFilter, lowStockFilter],
     async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -67,6 +75,9 @@ export default function InventoryPage() {
       })
       if (categoryFilter) {
         params.append('category', categoryFilter)
+      }
+      if (barangayFilter && user?.role === 'ADMIN') {
+        params.append('barangay', barangayFilter)
       }
       if (lowStockFilter) {
         params.append('lowStock', 'true')
@@ -79,10 +90,14 @@ export default function InventoryPage() {
     }
   )
 
-  const { data: stats } = useQuery('inventory-stats', async () => {
+  const { data: stats } = useQuery(['inventory-stats', barangayFilter], async () => {
+    const params = new URLSearchParams({ limit: '1' })
+    if (barangayFilter && user?.role === 'ADMIN') {
+      params.append('barangay', barangayFilter)
+    }
     const [all, lowStock] = await Promise.all([
-      api.get('/inventory?limit=1'),
-      api.get('/inventory?lowStock=true&limit=1'),
+      api.get(`/inventory?${params}`),
+      api.get(`/inventory?lowStock=true&${params}`),
     ])
     return {
       total: all.data.pagination?.total || 0,
@@ -132,43 +147,18 @@ export default function InventoryPage() {
   const items = inventoryData?.items || []
   const pagination = inventoryData?.pagination
 
-  useEffect(() => {
-    if (hydrated && !useAuthStore.getState().user) {
-      window.location.href = '/login'
-    }
-  }, [hydrated])
-
   const isLowStock = (item: any) => item.quantity <= item.minStock
 
   useEffect(() => {
+    if (hydrated && !useAuthStore.getState().user) {
+      router.push('/login')
+      return
+    }
     if (hydrated && user?.role === 'BARANGAY_EVALUATOR') {
       router.push('/dashboard')
+      return
     }
   }, [hydrated, user, router])
-
-  if (!hydrated) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </Layout>
-    )
-  }
-
-  if (user?.role === 'BARANGAY_EVALUATOR') {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-            <p className="text-gray-600">You do not have permission to access this page.</p>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
 
   return (
     <Layout>
@@ -241,7 +231,7 @@ export default function InventoryPage() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters || categoryFilter || lowStockFilter
+                  showFilters || categoryFilter || barangayFilter || lowStockFilter
                     ? 'bg-primary-50 border-primary-300 text-primary-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -289,6 +279,28 @@ export default function InventoryPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   />
                 </div>
+                {user?.role === 'ADMIN' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Barangay
+                    </label>
+                    <select
+                      value={barangayFilter}
+                      onChange={(e) => {
+                        setBarangayFilter(e.target.value)
+                        setPage(1)
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                    >
+                      <option value="">All Barangays</option>
+                      {BARANGAYS.map((barangay) => (
+                        <option key={barangay} value={barangay}>
+                          {barangay}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Stock Status
@@ -339,6 +351,9 @@ export default function InventoryPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Photo
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Item Name
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -350,6 +365,11 @@ export default function InventoryPage() {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Location
                       </th>
+                      {user?.role === 'ADMIN' && (
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Barangay
+                        </th>
+                      )}
                       <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Actions
                       </th>
@@ -358,6 +378,24 @@ export default function InventoryPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {items.map((item: any) => (
                       <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {item.photo ? (
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${item.photo}`}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <div className="flex-1">
@@ -386,6 +424,14 @@ export default function InventoryPage() {
                             </div>
                           )}
                         </td>
+                        {user?.role === 'ADMIN' && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-600 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {item.barangay || 'N/A'}
+                            </div>
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap">
                           {item.location ? (
                             <div className="text-sm text-gray-600 flex items-center">
@@ -450,6 +496,19 @@ export default function InventoryPage() {
                     isLowStock(item) ? 'border-red-200' : 'border-gray-100'
                   }`}
                 >
+                  {/* Item Image */}
+                  {item.photo && (
+                    <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${item.photo}`}
+                        alt={item.itemName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
+                  )}
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -489,6 +548,12 @@ export default function InventoryPage() {
                         <div className="flex items-center text-sm text-gray-600">
                           <MapPin className="h-4 w-4 mr-2 text-gray-400" />
                           {item.location}
+                        </div>
+                      )}
+                      {user?.role === 'ADMIN' && item.barangay && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Shield className="h-4 w-4 mr-2 text-gray-400" />
+                          {item.barangay}
                         </div>
                       )}
                       {item._count?.logs !== undefined && (
@@ -659,6 +724,7 @@ export default function InventoryPage() {
 
 // Inventory View Modal Component
 function InventoryViewModal({ item, onClose, onLogClick }: { item: any; onClose: () => void; onLogClick: () => void }) {
+  const { user } = useAuthStore()
   const { data: itemDetails } = useQuery(
     ['inventory-item', item.id],
     async () => {
@@ -673,16 +739,34 @@ function InventoryViewModal({ item, onClose, onLogClick }: { item: any; onClose:
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shadow-sm">
           <h2 className="text-xl font-bold text-gray-900">Inventory Item Details</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-red-50 rounded-lg transition-colors text-gray-500 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200"
+            aria-label="Close"
+            title="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="p-6">
+          {/* Item Photo */}
+          {(itemDetails?.photo || item.photo) && (
+            <div className="mb-6 flex justify-center">
+              <div className="relative">
+                <img
+                  src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5001'}${itemDetails?.photo || item.photo}`}
+                  alt={item.itemName}
+                  className="max-w-full h-auto max-h-80 rounded-lg border-2 border-gray-200 object-contain bg-gray-50 shadow-sm"
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              </div>
+            </div>
+          )}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -706,6 +790,15 @@ function InventoryViewModal({ item, onClose, onLogClick }: { item: any; onClose:
                   <p className="text-xs text-gray-500">Category</p>
                   <p className="text-sm font-medium text-gray-900">{item.category}</p>
                 </div>
+                {user?.role === 'ADMIN' && item.barangay && (
+                  <div>
+                    <p className="text-xs text-gray-500">Barangay</p>
+                    <p className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                      <Shield className="h-3 w-3" />
+                      {item.barangay}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-gray-500">Quantity</p>
                   <p className={`text-2xl font-bold ${

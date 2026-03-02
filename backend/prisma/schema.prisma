@@ -27,6 +27,7 @@ model User {
   financialRecords FinancialRecord[]
   incidents        Incident[]
   inventoryLogs    InventoryLog[]
+  inventoryItems   InventoryItem[]
   projects         Project[]
 
   @@map("users")
@@ -43,6 +44,15 @@ model Resident {
   civilStatus           String                @map("civil_status")
   barangay              String?               @map("barangay")
   address               String
+  purokSitio            String?               @map("purok_sitio")
+  municipality          String?               @map("municipality")
+  province              String?               @map("province")
+  streetSubdivision     String?               @map("street_subdivision")
+  zone                  String?               @map("zone")
+  houseBuildingNumber   String?               @map("house_building_number")
+  unitNumber            String?               @map("unit_number")
+  latitude              Float?                @map("latitude")
+  longitude             Float?                @map("longitude")
   contactNo             String                @map("contact_no")
   password              String?               @map("password")
   occupation            String?
@@ -51,7 +61,7 @@ model Resident {
   isPWD                 Boolean               @default(false) @map("is_pwd")
   idPhoto               String?               @map("id_photo")
   qrCode                String?               @unique @map("qr_code")
-  residencyStatus       ResidencyStatus       @default(NEW) @map("residency_status")
+  residencyStatus       ResidencyStatus       @default(RESIDENT) @map("residency_status")
   householdId           String?               @map("household_id")
   isArchived            Boolean               @default(false) @map("is_archived")
   createdAt             DateTime              @default(now()) @map("created_at")
@@ -73,12 +83,56 @@ model Household {
   id                    String                @id @default(uuid())
   householdNumber       String                @unique @map("household_number")
   headName              String                @map("head_name")
+  headFirstName         String?               @map("head_first_name")
+  headMiddleName        String?               @map("head_middle_name")
+  headLastName          String?               @map("head_last_name")
+  headOfFamilyName      String?               @map("head_of_family_name")
   address               String
+  houseNumber            String?               @map("house_number")
+  province              String?               @map("province")
+  purokSitio            String?               @map("purok_sitio")
+  streetSubdivision     String?               @map("street_subdivision")
+  barangay              String?               @map("barangay")
+  zone                  String?               @map("zone")
+  municipality          String?               @map("municipality")
+  houseBuildingNumber   String?               @map("house_building_number")
+  unitNumber            String?               @map("unit_number")
   latitude              Float?
   longitude             Float?
   income                Decimal?              @db.Decimal(12, 2)
   livingConditions      String?               @map("living_conditions")
   householdSize         Int                   @default(1) @map("household_size")
+  ownerMainFamily       String?               @map("owner_main_family")
+  extendedFamily        String?               @map("extended_family")
+  mainFamilyHeadId      String?               @map("main_family_head_id")
+  numberOfFamilyMembers Int?                  @map("number_of_family_members")
+  yearFirstResided      Int?                  @map("year_first_resided")
+  placeOfOriginMunicipality String?           @map("place_of_origin_municipality")
+  placeOfOriginProvince String?              @map("place_of_origin_province")
+  // Health Information
+  threeMealsDaily       String?               @map("three_meals_daily")
+  hasMedicinalPlants    String?               @map("has_medicinal_plants")
+  medicinalPlantTypes   String?               @map("medicinal_plant_types")
+  hasVegetableGarden    String?               @map("has_vegetable_garden")
+  usesIodizedSalt       String?               @map("uses_iodized_salt")
+  usesFamilyPlanning    String?               @map("uses_family_planning")
+  familyPlanningMethod  String?               @map("family_planning_method")
+  // Natural Family Planning Methods
+  basalBodyTemperature  Boolean               @default(false) @map("basal_body_temperature")
+  cervicalMucus         Boolean               @default(false) @map("cervical_mucus")
+  lactationalMucus      Boolean               @default(false) @map("lactational_mucus")
+  rhythm                Boolean               @default(false) @map("rhythm")
+  standardDaysMethod    Boolean               @default(false) @map("standard_days_method")
+  symptoThermalMethod   Boolean               @default(false) @map("sympto_thermal_method")
+  withdrawal            Boolean               @default(false) @map("withdrawal")
+  // Artificial Family Planning Methods
+  condom                Boolean               @default(false) @map("condom")
+  depoInjection        Boolean               @default(false) @map("depo_injection")
+  iud                  Boolean               @default(false) @map("iud")
+  tubalLigation        Boolean               @default(false) @map("tubal_ligation")
+  pills                Boolean               @default(false) @map("pills")
+  vasectomy            Boolean               @default(false) @map("vasectomy")
+  subdermalImplants    Boolean               @default(false) @map("subdermal_implants")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
   disasterBeneficiaries DisasterBeneficiary[]
@@ -272,18 +326,19 @@ model FinancialRecord {
 }
 
 model Announcement {
-  id          String           @id @default(uuid())
-  title       String
-  content     String
-  type        AnnouncementType @default(GENERAL)
-  isPinned    Boolean          @default(false) @map("is_pinned")
-  attachments String[]         @default([])
-  startDate   DateTime?        @map("start_date")
-  endDate     DateTime?        @map("end_date")
-  createdBy   String           @map("created_by")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-  creator     User             @relation(fields: [createdBy], references: [id])
+  id              String           @id @default(uuid())
+  title           String
+  content         String
+  type            AnnouncementType @default(GENERAL)
+  isPinned        Boolean          @default(false) @map("is_pinned")
+  attachments     String[]         @default([])
+  targetBarangays String[]         @default([]) @map("target_barangays")
+  startDate       DateTime?        @map("start_date")
+  endDate         DateTime?        @map("end_date")
+  createdBy       String           @map("created_by")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  creator         User             @relation(fields: [createdBy], references: [id])
 
   @@index([isPinned, createdAt])
   @@map("announcements")
@@ -334,11 +389,15 @@ model InventoryItem {
   photo     String?        @map("photo")
   location  String?
   notes     String?
+  barangay  String?        @map("barangay")
+  createdBy String         @map("created_by")
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @updatedAt @map("updated_at")
   logs      InventoryLog[]
+  creator   User           @relation(fields: [createdBy], references: [id])
 
   @@index([category])
+  @@index([barangay])
   @@map("inventory_items")
 }
 
@@ -389,9 +448,8 @@ enum UserRole {
 }
 
 enum ResidencyStatus {
-  NEW
-  RETURNING
-  TRANSFERRED
+  RESIDENT
+  INSTITUTIONAL_HOUSEHOLD
 }
 
 enum DocumentType {

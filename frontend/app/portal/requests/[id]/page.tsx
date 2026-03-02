@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useQuery } from 'react-query'
 import portalApi from '@/lib/portal-api'
-import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Download } from 'lucide-react'
+import { FileText, Clock, CheckCircle, XCircle, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { getFileUrl } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import PortalHeader from '@/components/PortalHeader'
 
 export default function RequestDetailsPage() {
   const router = useRouter()
@@ -73,42 +74,50 @@ export default function RequestDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading request details...</p>
+        </div>
       </div>
     )
   }
 
   if (!request) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Request not found</h2>
-          <Link href="/portal/requests" className="text-primary-600 hover:text-primary-700">
-            Back to Requests
-          </Link>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <PortalHeader />
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-12 text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Request not found</h2>
+            <Link href="/portal/requests" className="text-blue-600 hover:text-blue-700 font-semibold">
+              Back to Requests
+            </Link>
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link
-            href="/portal/requests"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Requests
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Request Details</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <PortalHeader />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <FileText className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Request Details</h1>
+              <p className="text-sm text-gray-600 mt-1">View details and status of your document request</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
           <div className="flex items-start justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -119,7 +128,7 @@ export default function RequestDetailsPage() {
               </p>
             </div>
             <span
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border ${getStatusColor(
                 request.status
               )}`}
             >
@@ -164,21 +173,21 @@ export default function RequestDetailsPage() {
           </div>
 
           {request.rejectedReason && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-red-900 mb-1">Rejection Reason</h3>
+            <div className="bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl p-4 mb-6">
+              <h3 className="font-bold text-red-900 mb-1">Rejection Reason</h3>
               <p className="text-sm text-red-800">{request.rejectedReason}</p>
             </div>
           )}
 
           {request.notes && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h3 className="font-medium text-blue-900 mb-1">Notes</h3>
+            <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-xl p-4 mb-6">
+              <h3 className="font-bold text-blue-900 mb-1">Notes</h3>
               <p className="text-sm text-blue-800">{request.notes}</p>
             </div>
           )}
 
           {request.document && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="bg-emerald-50/80 backdrop-blur-sm border border-emerald-200 rounded-xl p-4 mb-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium text-green-900 mb-1">Document Ready</h3>
@@ -196,7 +205,7 @@ export default function RequestDetailsPage() {
                     href={getFileUrl(request.document.filePath)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold transition-all"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download
@@ -211,7 +220,7 @@ export default function RequestDetailsPage() {
           )}
 
           {request.status === 'APPROVED' && request.paymentStatus === 'UNPAID' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200 rounded-xl p-4">
               <div>
                 <h3 className="font-medium text-blue-900 mb-1">Request Approved</h3>
                 <p className="text-sm text-blue-800">

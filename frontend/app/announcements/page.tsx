@@ -98,7 +98,7 @@ export default function AnnouncementsPage() {
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
       GENERAL: 'bg-blue-100 text-blue-800',
-      URGENT: 'bg-red-100 text-red-800',
+      EMERGENCY: 'bg-red-100 text-red-800',
       NOTICE: 'bg-yellow-100 text-yellow-800',
       EVENT: 'bg-green-100 text-green-800',
     }
@@ -208,7 +208,7 @@ export default function AnnouncementsPage() {
               >
                 <option value="">All Types</option>
                 <option value="GENERAL">General</option>
-                <option value="URGENT">Urgent</option>
+                <option value="EMERGENCY">Emergency</option>
                 <option value="NOTICE">Notice</option>
                 <option value="EVENT">Event</option>
               </select>

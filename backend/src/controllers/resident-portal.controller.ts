@@ -7,6 +7,8 @@ import path from 'path';
 import fs from 'fs';
 
 const prisma = new PrismaClient();
+const DIRECT_MESSAGE_TAG = '[DIRECT_MESSAGE]';
+type MessageMeta = { viewedAt: string | null };
 
 // Generate request number
 const generateRequestNumber = () => {
@@ -14,6 +16,29 @@ const generateRequestNumber = () => {
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `REQ-${year}-${random}`;
 };
+
+const parseDirectMessageNarrative = (narrative: string) => {
+  const lines = narrative.split('\n');
+  const subjectLine = lines.find((line) => line.startsWith('Subject: ')) || 'Subject: No subject';
+  const subject = subjectLine.replace('Subject: ', '').trim() || 'No subject';
+  const messageStartIndex = lines.findIndex((line) => line.startsWith('Subject: '));
+  const message = lines.slice(messageStartIndex + 1).join('\n').trim();
+  return { subject, message };
+};
+
+const parseMessageMeta = (value: string | null | undefined): MessageMeta => {
+  if (!value) return { viewedAt: null };
+  try {
+    const parsed = JSON.parse(value);
+    return {
+      viewedAt: typeof parsed?.viewedAt === 'string' ? parsed.viewedAt : null,
+    };
+  } catch {
+    return { viewedAt: null };
+  }
+};
+
+const serializeMessageMeta = (meta: MessageMeta) => JSON.stringify(meta);
 
 // Resident login/verification
 export const residentLogin = async (req: Request, res: Response) => {
@@ -552,30 +577,147 @@ export const getMyComplaints = async (req: Request, res: Response) => {
   }
 };
 
+// Get resident direct messages from admin
+export const getMyDirectMessages = async (req: Request, res: Response) => {
+  try {
+    const residentId = (req as any).residentId;
+    if (!residentId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const where: any = {
+      complainantId: residentId,
+      narrative: { startsWith: DIRECT_MESSAGE_TAG },
+    };
+
+    const [messages, total] = await Promise.all([
+      prisma.incident.findMany({
+        where,
+        skip,
+        take: parseInt(limit as string),
+        include: {
+          creator: {
+            select: {
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.incident.count({ where }),
+    ]);
+
+    res.json({
+      messages: messages.map((msg) => {
+        const parsed = parseDirectMessageNarrative(msg.narrative);
+        const meta = parseMessageMeta(msg.actionsTaken);
+        return {
+          id: msg.id,
+          messageNumber: msg.incidentNumber,
+          subject: parsed.subject,
+          message: parsed.message,
+          sentAt: msg.createdAt,
+          sender: msg.creator,
+          isViewed: !!meta.viewedAt,
+          viewedAt: meta.viewedAt,
+          attachments: msg.attachments || [],
+        };
+      }),
+      pagination: {
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        total,
+        pages: Math.ceil(total / parseInt(limit as string)),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+};
+
+// Mark a direct message as viewed by the resident
+export const markMyDirectMessageViewed = async (req: Request, res: Response) => {
+  try {
+    const residentId = (req as any).residentId;
+    if (!residentId) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { id } = req.params;
+
+    const message = await prisma.incident.findFirst({
+      where: {
+        id,
+        complainantId: residentId,
+        narrative: { startsWith: DIRECT_MESSAGE_TAG },
+      },
+      select: { id: true, actionsTaken: true },
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    const meta = parseMessageMeta(message.actionsTaken);
+    if (!meta.viewedAt) {
+      await prisma.incident.update({
+        where: { id: message.id },
+        data: {
+          actionsTaken: serializeMessageMeta({ viewedAt: new Date().toISOString() }),
+        },
+      });
+    }
+
+    return res.json({ message: 'Marked as viewed' });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message || 'Internal server error' });
+  }
+};
+
 // Get public announcements
 export const getPublicAnnouncements = async (req: Request, res: Response) => {
   try {
-    const { page = '1', limit = '10' } = req.query;
+    const { page = '1', limit = '10', barangay } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const now = new Date();
 
-    const [announcements, total] = await Promise.all([
-      prisma.announcement.findMany({
-        where: {
+    // Build where clause for date filtering
+    const dateWhere: any = {
+      OR: [
+        { startDate: null },
+        { startDate: { lte: now } },
+      ],
+      AND: [
+        {
           OR: [
-            { startDate: null },
-            { startDate: { lte: now } },
-          ],
-          AND: [
-            {
-              OR: [
-                { endDate: null },
-                { endDate: { gte: now } },
-              ],
-            },
+            { endDate: null },
+            { endDate: { gte: now } },
           ],
         },
+      ],
+    };
+
+    // Add barangay filtering to where clause if provided
+    if (barangay && typeof barangay === 'string') {
+      dateWhere.AND.push({
+        OR: [
+          // Show announcements with no target barangays (for all)
+          { targetBarangays: { equals: [] } },
+          // Show announcements where the barangay is in the target list
+          { targetBarangays: { has: barangay } },
+        ],
+      });
+    }
+
+    const [announcements, total] = await Promise.all([
+      prisma.announcement.findMany({
+        where: dateWhere,
         skip,
         take: parseInt(limit as string),
         orderBy: [
@@ -589,26 +731,14 @@ export const getPublicAnnouncements = async (req: Request, res: Response) => {
           type: true,
           isPinned: true,
           attachments: true,
+          targetBarangays: true,
           startDate: true,
           endDate: true,
           createdAt: true,
         },
       }),
       prisma.announcement.count({
-        where: {
-          OR: [
-            { startDate: null },
-            { startDate: { lte: now } },
-          ],
-          AND: [
-            {
-              OR: [
-                { endDate: null },
-                { endDate: { gte: now } },
-              ],
-            },
-          ],
-        },
+        where: dateWhere,
       }),
     ]);
 
@@ -639,35 +769,5 @@ export const getDocumentTypes = async (req: Request, res: Response) => {
   });
 };
 
-// Payment callback (for payment gateway integration)
-export const paymentCallback = async (req: Request, res: Response) => {
-  try {
-    const { requestId, paymentReference, paymentMethod, status } = req.body;
-
-    if (!requestId || !status) {
-      return res.status(400).json({ message: 'Request ID and payment status are required' });
-    }
-
-    const request = await prisma.documentRequest.findUnique({
-      where: { id: requestId },
-    });
-
-    if (!request) {
-      return res.status(404).json({ message: 'Request not found' });
-    }
-
-    await prisma.documentRequest.update({
-      where: { id: requestId },
-      data: {
-        paymentStatus: status === 'success' ? 'PAID' : status === 'pending' ? 'PENDING' : 'FAILED',
-        paymentMethod,
-        paymentReference,
-      },
-    });
-
-    res.json({ message: 'Payment status updated' });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-};
+// Payment callback removed - all payments are now made over the counter at the barangay hall office
 

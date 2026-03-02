@@ -12,6 +12,7 @@
     "prisma:studio": "prisma studio",
     "create-admin": "tsx scripts/create-admin.ts",
     "create-evaluators": "tsx scripts/create-barangay-evaluators.ts",
+    "create-barangay-admins": "tsx scripts/create-barangay-admins.ts",
     "reset-admin": "tsx scripts/reset-admin-password.ts",
     "test": "jest"
   },

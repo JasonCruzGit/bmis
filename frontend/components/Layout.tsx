@@ -41,6 +41,7 @@ const menuItems = [
   { href: '/blotter', label: 'Blotter', icon: BookOpen, evaluatorRestricted: true, group: 'management' },
   // Communication
   { href: '/announcements', label: 'Announcements', icon: Megaphone, evaluatorRestricted: true, group: 'communication' },
+  { href: '/direct-messages', label: 'Direct Messages', icon: MessageSquare, allowedRoles: ['ADMIN', 'BARANGAY_CHAIRMAN'], group: 'communication' },
   { href: '/resident-requests', label: 'Resident Requests', icon: MessageSquare, evaluatorRestricted: true, group: 'communication' },
   { href: '/complaints', label: 'Resident Complaints', icon: AlertTriangle, evaluatorRestricted: true, group: 'communication' },
   // System
@@ -74,14 +75,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     router.push('/login')
   }
 
-  // Don't render user-dependent content until hydrated
-  if (!hydrated) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    )
-  }
+  // Redirect to login if not authenticated (only on client after hydration)
+  useEffect(() => {
+    if (hydrated && !user && pathname !== '/login') {
+      router.push('/login')
+    }
+  }, [hydrated, user, pathname, router])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,28 +88,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
         <div className={`fixed inset-y-0 left-0 flex w-72 flex-col h-full bg-white shadow-2xl transform transition-transform duration-300 overflow-hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex h-20 items-center justify-between px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
-            <div className="flex items-center gap-2.5 flex-1">
-              <div className="relative w-10 h-10 bg-white rounded-lg p-1 flex-shrink-0">
+          <div className="flex h-24 items-center justify-between px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative w-14 h-14 bg-white rounded-xl p-1.5 shadow-md flex-shrink-0">
                 {logoError ? (
-                  <Shield className="h-7 w-7 text-primary-600" />
+                  <Shield className="h-10 w-10 text-primary-600" />
                 ) : (
                   <Image
                     src="/logo.png"
                     alt="El Nido Municipality Seal"
-                    width={32}
-                    height={32}
+                    width={48}
+                    height={48}
                     className="object-contain"
                     onError={() => setLogoError(true)}
                   />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xs font-bold text-white leading-tight">
+                <h1 className="text-base font-extrabold text-white leading-tight tracking-tight">
                   <span className="block">Barangay Management</span>
                   <span className="block">Information System</span>
                 </h1>
-                <p className="text-[10px] text-primary-100 mt-0.5 font-medium">Management Portal</p>
+                <p className="text-sm text-primary-100 mt-1 font-semibold">Management Portal</p>
               </div>
             </div>
             <button 
@@ -125,6 +124,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {['core', 'management', 'communication', 'system'].map((group) => {
                 const groupItems = menuItems.filter((item) => {
                   if (item.group !== group) return false
+                  if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) {
+                    return false
+                  }
                   // Hide admin-only items from non-admin users
                   if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
                     return false
@@ -207,28 +209,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
         <div className="flex flex-col h-full bg-white border-r border-gray-200 shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="flex items-center h-20 px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
-            <div className="flex items-center gap-2.5 flex-1">
-              <div className="relative w-10 h-10 bg-white rounded-lg p-1 flex-shrink-0">
+          <div className="flex items-center h-24 px-4 border-b border-primary-500/20 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 shadow-md flex-shrink-0">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative w-14 h-14 bg-white rounded-xl p-1.5 shadow-md flex-shrink-0">
                 {logoError ? (
-                  <Shield className="h-7 w-7 text-primary-600" />
+                  <Shield className="h-10 w-10 text-primary-600" />
                 ) : (
                   <Image
                     src="/logo.png"
                     alt="El Nido Municipality Seal"
-                    width={32}
-                    height={32}
+                    width={48}
+                    height={48}
                     className="object-contain"
                     onError={() => setLogoError(true)}
                   />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xs font-bold text-white leading-tight">
+                <h1 className="text-base font-extrabold text-white leading-tight tracking-tight">
                   <span className="block">Barangay Management</span>
                   <span className="block">Information System</span>
                 </h1>
-                <p className="text-[10px] text-primary-100 mt-0.5 font-medium">Management Portal</p>
+                <p className="text-sm text-primary-100 mt-1 font-semibold">Management Portal</p>
               </div>
             </div>
           </div>
@@ -239,6 +241,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {['core', 'management', 'communication', 'system'].map((group) => {
                 const groupItems = menuItems.filter((item) => {
                   if (item.group !== group) return false
+                  if (item.allowedRoles && (!user?.role || !item.allowedRoles.includes(user.role))) {
+                    return false
+                  }
                   // Hide admin-only items from non-admin users
                   if (item.adminOnly && user?.role !== 'ADMIN' && user?.role !== 'BARANGAY_CHAIRMAN') {
                     return false

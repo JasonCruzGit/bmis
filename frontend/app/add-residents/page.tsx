@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import api from '@/lib/api'
@@ -14,12 +14,21 @@ export default function AddResidentsPage() {
   const router = useRouter()
   const { hydrated } = useAuthStore()
   const queryClient = useQueryClient()
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [idPhotoPreview, setIdPhotoPreview] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrCodeData, setQrCodeData] = useState<string | null>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [newResidentName, setNewResidentName] = useState<string>('')
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1)
+  const [gettingLocation, setGettingLocation] = useState(false)
+  const [showCameraModal, setShowCameraModal] = useState(false)
+  const [capturingPhoto, setCapturingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -31,23 +40,39 @@ export default function AddResidentsPage() {
     civilStatus: '',
     barangay: '',
     address: '',
+    purokSitio: '',
+    municipality: '',
+    province: '',
+    streetSubdivision: '',
+    zone: '',
+    houseBuildingNumber: '',
+    unitNumber: '',
+    latitude: '',
+    longitude: '',
     contactNo: '',
     occupation: '',
     education: '',
     householdId: '',
-    residencyStatus: 'NEW',
+    residencyStatus: 'RESIDENT',
     lengthOfStayYears: '',
     lengthOfStayMonths: '',
     isPWD: false,
   })
 
   const [idPhotoFile, setIdPhotoFile] = useState<File | null>(null)
+  const PH_MOBILE_REGEX = /^09\d{9}$/
 
   // Fetch households for dropdown
   const { data: householdsData } = useQuery('households', async () => {
     const { data } = await api.get('/households?limit=1000')
     return data?.households || []
+  }, {
+    enabled: mounted && hydrated
   })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (hydrated && !useAuthStore.getState().user) {
@@ -55,9 +80,73 @@ export default function AddResidentsPage() {
     }
   }, [hydrated, router])
 
+  useEffect(() => {
+    return () => {
+      stopCameraStream()
+    }
+  }, [])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    if (name === 'contactNo') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 11)
+      setFormData(prev => ({ ...prev, contactNo: digitsOnly }))
+      return
+    }
+    const nextValue =
+      e.target instanceof HTMLInputElement && e.target.type === 'checkbox'
+        ? e.target.checked
+        : value
+    setFormData(prev => ({ ...prev, [name]: nextValue }))
+  }
+
+  const validateStepOne = () => {
+    const requiredFields: Array<{ key: keyof typeof formData; label: string }> = [
+      { key: 'firstName', label: 'First Name' },
+      { key: 'lastName', label: 'Last Name' },
+      { key: 'dateOfBirth', label: 'Date of Birth' },
+      { key: 'sex', label: 'Sex' },
+      { key: 'civilStatus', label: 'Civil Status' },
+      { key: 'residencyStatus', label: 'Residency Status' },
+      { key: 'barangay', label: 'Barangay' },
+      { key: 'contactNo', label: 'Contact Number' },
+    ]
+
+    const missingField = requiredFields.find(field => !String(formData[field.key] || '').trim())
+    if (missingField) {
+      toast.error(`${missingField.label} is required before moving to page 2`)
+      return false
+    }
+    if (!PH_MOBILE_REGEX.test(formData.contactNo.trim())) {
+      toast.error('Contact Number must be a valid Philippine mobile number (09XXXXXXXXX)')
+      return false
+    }
+    return true
+  }
+
+  const validateBeforeSubmit = () => {
+    const requiredFields: Array<{ key: keyof typeof formData; label: string }> = [
+      { key: 'firstName', label: 'First Name' },
+      { key: 'lastName', label: 'Last Name' },
+      { key: 'dateOfBirth', label: 'Date of Birth' },
+      { key: 'sex', label: 'Sex' },
+      { key: 'civilStatus', label: 'Civil Status' },
+      { key: 'residencyStatus', label: 'Residency Status' },
+      { key: 'barangay', label: 'Barangay' },
+      { key: 'contactNo', label: 'Contact Number' },
+      { key: 'address', label: 'Complete Address' },
+    ]
+
+    const missingField = requiredFields.find(field => !String(formData[field.key] || '').trim())
+    if (missingField) {
+      toast.error(`${missingField.label} is required`)
+      return false
+    }
+    if (!PH_MOBILE_REGEX.test(formData.contactNo.trim())) {
+      toast.error('Contact Number must be a valid Philippine mobile number (09XXXXXXXXX)')
+      return false
+    }
+    return true
   }
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,8 +174,148 @@ export default function AddResidentsPage() {
     setIdPhotoPreview(null)
   }
 
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }
+
+  const closeCameraModal = () => {
+    stopCameraStream()
+    setShowCameraModal(false)
+    setCapturingPhoto(false)
+  }
+
+  const handleOpenCamera = async () => {
+    if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      toast.error('Camera capture is not supported in this browser')
+      fileInputRef.current?.click()
+      return
+    }
+
+    try {
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false,
+        })
+      } catch {
+        // Fallback for devices/browsers that don't support facingMode
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      }
+
+      streamRef.current = stream
+      setShowCameraModal(true)
+
+      // Wait for modal render then attach stream to video element
+      setTimeout(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current
+          videoRef.current.play().catch(() => {
+            toast.error('Unable to start camera preview')
+            closeCameraModal()
+          })
+        }
+      }, 0)
+    } catch {
+      toast.error('Unable to access camera. Please allow camera permission.')
+      fileInputRef.current?.click()
+    }
+  }
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error('Camera is not ready')
+      return
+    }
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const width = video.videoWidth || 1280
+    const height = video.videoHeight || 720
+    canvas.width = width
+    canvas.height = height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      toast.error('Unable to capture photo')
+      return
+    }
+
+    setCapturingPhoto(true)
+    ctx.drawImage(video, 0, 0, width, height)
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setCapturingPhoto(false)
+          toast.error('Failed to capture photo')
+          return
+        }
+
+        if (blob.size > 5 * 1024 * 1024) {
+          setCapturingPhoto(false)
+          toast.error('Captured image is larger than 5MB. Please try again.')
+          return
+        }
+
+        const file = new File([blob], `resident-photo-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        setIdPhotoFile(file)
+        setIdPhotoPreview(canvas.toDataURL('image/jpeg'))
+        setCapturingPhoto(false)
+        closeCameraModal()
+        toast.success('Photo captured successfully')
+      },
+      'image/jpeg',
+      0.92
+    )
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device/browser')
+      return
+    }
+
+    setGettingLocation(true)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        setFormData(prev => ({
+          ...prev,
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+        }))
+        setGettingLocation(false)
+        toast.success('Current location captured')
+      },
+      (error) => {
+        setGettingLocation(false)
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Location permission denied')
+        } else if (error.code === error.TIMEOUT) {
+          toast.error('Location request timed out')
+        } else {
+          toast.error('Unable to get current location')
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    )
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateBeforeSubmit()) return
     setLoading(true)
 
     try {
@@ -112,6 +341,12 @@ export default function AddResidentsPage() {
         if (value !== '' && value !== null && value !== undefined) {
           if (typeof value === 'boolean') {
             submitData.append(key, value.toString())
+          } else if (key === 'latitude' || key === 'longitude') {
+            // Convert to number for latitude/longitude
+            const numValue = parseFloat(value as string)
+            if (!isNaN(numValue)) {
+              submitData.append(key, numValue.toString())
+            }
           } else {
             submitData.append(key, value)
           }
@@ -160,17 +395,27 @@ export default function AddResidentsPage() {
         civilStatus: '',
         barangay: '',
         address: '',
+        purokSitio: '',
+        municipality: '',
+        province: '',
+        streetSubdivision: '',
+        zone: '',
+        houseBuildingNumber: '',
+        unitNumber: '',
+        latitude: '',
+        longitude: '',
         contactNo: '',
         occupation: '',
         education: '',
         householdId: '',
-        residencyStatus: 'NEW',
+        residencyStatus: 'RESIDENT',
         lengthOfStayYears: '',
         lengthOfStayMonths: '',
         isPWD: false,
       })
       setIdPhotoFile(null)
       setIdPhotoPreview(null)
+      setCurrentStep(1)
       
       // Optionally redirect to residents list or stay on page for another entry
       // router.push('/residents')
@@ -181,7 +426,7 @@ export default function AddResidentsPage() {
     }
   }
 
-  if (!hydrated) {
+  if (!mounted || !hydrated) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -218,6 +463,37 @@ export default function AddResidentsPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 space-y-8">
+          {/* Step Indicator */}
+          <div className="flex items-center justify-between gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep === 1 ? 'bg-primary-600 text-white' : 'bg-green-600 text-white'
+              }`}>
+                1
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Page 1</p>
+                <p className="text-xs text-gray-600">Personal & Contact Basics</p>
+              </div>
+            </div>
+            <div className="flex-1 h-1 bg-gray-200 rounded-full max-w-28">
+              <div className={`h-1 rounded-full transition-all duration-300 ${currentStep === 2 ? 'w-full bg-primary-600' : 'w-0 bg-primary-600'}`} />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep === 2 ? 'bg-primary-600 text-white' : 'bg-gray-300 text-gray-700'
+              }`}>
+                2
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Page 2</p>
+                <p className="text-xs text-gray-600">Address, Extras & Photo</p>
+              </div>
+            </div>
+          </div>
+
+          {currentStep === 1 && (
+            <>
           {/* Personal Information Section */}
           <div>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
@@ -237,7 +513,7 @@ export default function AddResidentsPage() {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                   placeholder="Enter first name"
                 />
               </div>
@@ -250,7 +526,7 @@ export default function AddResidentsPage() {
                   name="middleName"
                   value={formData.middleName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                   placeholder="Enter middle name"
                 />
               </div>
@@ -264,7 +540,7 @@ export default function AddResidentsPage() {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                   placeholder="Enter last name"
                 />
               </div>
@@ -278,7 +554,7 @@ export default function AddResidentsPage() {
                   value={formData.suffix}
                   onChange={handleInputChange}
                   placeholder="Jr., Sr., III"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 />
               </div>
               <div>
@@ -292,7 +568,7 @@ export default function AddResidentsPage() {
                   onChange={handleInputChange}
                   required
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 />
               </div>
               <div>
@@ -304,7 +580,7 @@ export default function AddResidentsPage() {
                   value={formData.sex}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select...</option>
                   <option value="MALE">Male</option>
@@ -320,7 +596,7 @@ export default function AddResidentsPage() {
                   value={formData.civilStatus}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select...</option>
                   <option value="SINGLE">Single</option>
@@ -339,11 +615,10 @@ export default function AddResidentsPage() {
                   value={formData.residencyStatus}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
-                  <option value="NEW">New</option>
-                  <option value="RETURNING">Returning</option>
-                  <option value="TRANSFERRED">Transferred</option>
+                  <option value="RESIDENT">Resident</option>
+                  <option value="INSTITUTIONAL_HOUSEHOLD">Institutional Household</option>
                 </select>
               </div>
               <div>
@@ -357,7 +632,7 @@ export default function AddResidentsPage() {
                       name="lengthOfStayYears"
                       value={formData.lengthOfStayYears}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                     >
                       <option value="">Years</option>
                       {Array.from({ length: 101 }, (_, i) => (
@@ -372,7 +647,7 @@ export default function AddResidentsPage() {
                       name="lengthOfStayMonths"
                       value={formData.lengthOfStayMonths}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                     >
                       <option value="">Months</option>
                       {Array.from({ length: 12 }, (_, i) => (
@@ -422,7 +697,7 @@ export default function AddResidentsPage() {
                   value={formData.barangay}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select Barangay</option>
                   <option value="Bagong Bayan">Bagong Bayan</option>
@@ -456,14 +731,182 @@ export default function AddResidentsPage() {
                   value={formData.contactNo}
                   onChange={handleInputChange}
                   required
-                  placeholder="09XX XXX XXXX"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  placeholder="09XXXXXXXXX"
+                  inputMode="numeric"
+                  maxLength={11}
+                  pattern="^09\d{9}$"
+                  title="Enter a valid Philippine mobile number (09XXXXXXXXX)"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+            </div>
+          </div>
+            </>
+          )}
+
+          {currentStep === 2 && (
+            <>
+          {/* Address Details Section */}
+          <div>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
+              <div className="p-2 bg-primary-100 rounded-lg">
+                <MapPin className="h-5 w-5 text-primary-600" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Address Details</h2>
+            </div>
+            <div className="mb-5">
+              <button
+                type="button"
+                onClick={handleUseCurrentLocation}
+                disabled={gettingLocation}
+                className="inline-flex items-center px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-semibold text-sm"
+              >
+                {gettingLocation ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Getting location...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Use Current Location
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  House/Building Number
+                </label>
+                <input
+                  type="text"
+                  name="houseBuildingNumber"
+                  value={formData.houseBuildingNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter house/building number"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Unit Number
+                </label>
+                <input
+                  type="text"
+                  name="unitNumber"
+                  value={formData.unitNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter unit number"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Street/Subdivision
+                </label>
+                <input
+                  type="text"
+                  name="streetSubdivision"
+                  value={formData.streetSubdivision}
+                  onChange={handleInputChange}
+                  placeholder="Enter street/subdivision"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Zone
+                </label>
+                <input
+                  type="text"
+                  name="zone"
+                  value={formData.zone}
+                  onChange={handleInputChange}
+                  placeholder="Enter zone"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Purok/Sitio
+                </label>
+                <input
+                  type="text"
+                  name="purokSitio"
+                  value={formData.purokSitio}
+                  onChange={handleInputChange}
+                  placeholder="Enter purok/sitio"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Municipality
+                </label>
+                <input
+                  type="text"
+                  name="municipality"
+                  value={formData.municipality}
+                  onChange={handleInputChange}
+                  placeholder="Enter municipality"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Province
+                </label>
+                <input
+                  type="text"
+                  name="province"
+                  value={formData.province}
+                  onChange={handleInputChange}
+                  placeholder="Enter province"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleInputChange}
+                  step="any"
+                  placeholder="e.g., 14.5995"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin className="h-4 w-4 inline mr-1.5" />
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleInputChange}
+                  step="any"
+                  placeholder="e.g., 120.9842"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <MapPin className="h-4 w-4 inline mr-1.5" />
-                  Address <span className="text-red-500">*</span>
+                  Complete Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="address"
@@ -471,9 +914,10 @@ export default function AddResidentsPage() {
                   onChange={handleInputChange}
                   required
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white resize-none"
-                  placeholder="Enter complete address"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white resize-none text-gray-900"
+                  placeholder="Enter complete address (will be auto-filled from above fields if provided)"
                 />
+                <p className="text-xs text-gray-500 mt-1">This field will be used as the main address. You can manually enter or it will be constructed from the fields above.</p>
               </div>
             </div>
           </div>
@@ -497,7 +941,7 @@ export default function AddResidentsPage() {
                   name="occupation"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                   placeholder="Enter occupation"
                 />
               </div>
@@ -510,7 +954,7 @@ export default function AddResidentsPage() {
                   name="education"
                   value={formData.education}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select...</option>
                   <option value="ELEMENTARY">Elementary</option>
@@ -530,7 +974,7 @@ export default function AddResidentsPage() {
                   name="householdId"
                   value={formData.householdId}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select household...</option>
                   {householdsData?.map((household: any) => (
@@ -582,16 +1026,31 @@ export default function AddResidentsPage() {
                   Upload ID Photo
                 </label>
                 <div className="space-y-3">
-                  <label className="inline-flex items-center px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer transition-colors shadow-md hover:shadow-lg font-medium">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Choose File
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center px-5 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg font-medium"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenCamera}
+                      className="inline-flex items-center px-5 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-md hover:shadow-lg font-medium"
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Take Photo
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
                   {idPhotoFile && (
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <p className="text-sm font-medium text-gray-700">
@@ -606,34 +1065,121 @@ export default function AddResidentsPage() {
               </div>
             </div>
           </div>
+            </>
+          )}
 
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-3 pt-6 border-t-2 border-gray-200">
+          <div className="flex items-center justify-between gap-3 pt-6 border-t-2 border-gray-200">
             <Link
               href="/residents"
               className="px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold"
             >
               View Residents
             </Link>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg font-semibold"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Resident
-                </>
+            <div className="flex items-center gap-3">
+              {currentStep === 2 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="px-6 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold"
+                >
+                  Back to Page 1
+                </button>
               )}
-            </button>
+              {currentStep === 1 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validateStepOne()) {
+                      setCurrentStep(2)
+                    }
+                  }}
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-md hover:shadow-lg font-semibold"
+                >
+                  Next Page
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg font-semibold"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Resident
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </form>
+
+        {/* Camera Capture Modal */}
+        {showCameraModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Capture ID Photo</h2>
+                <button
+                  type="button"
+                  onClick={closeCameraModal}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="rounded-lg overflow-hidden border-2 border-gray-200 bg-black">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-[360px] object-cover"
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  Position the resident in frame, then tap capture.
+                </p>
+                <div className="mt-5 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={closeCameraModal}
+                    className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCapturePhoto}
+                    disabled={capturingPhoto}
+                    className="inline-flex items-center px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors font-semibold"
+                  >
+                    {capturingPhoto ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Capturing...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture Photo
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* QR Code Modal */}
         {showQRModal && qrCodeData && (

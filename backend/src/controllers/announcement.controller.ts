@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 export const getActiveAnnouncements = async (req: Request, res: Response) => {
   try {
     const now = new Date();
+    const { barangay } = req.query;
 
     const announcements = await prisma.announcement.findMany({
       where: {
@@ -24,7 +25,20 @@ export const getActiveAnnouncements = async (req: Request, res: Response) => {
       take: 10
     });
 
-    res.json(announcements);
+    // Filter by barangay if provided
+    let filteredAnnouncements = announcements;
+    if (barangay && typeof barangay === 'string') {
+      filteredAnnouncements = announcements.filter(announcement => {
+        // If targetBarangays is empty, show to all barangays
+        if (!announcement.targetBarangays || announcement.targetBarangays.length === 0) {
+          return true;
+        }
+        // Otherwise, check if the resident's barangay is in the target list
+        return announcement.targetBarangays.includes(barangay);
+      });
+    }
+
+    res.json(filteredAnnouncements);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -107,12 +121,27 @@ export const createAnnouncement = async (req: AuthRequest, res: Response) => {
       type,
       isPinned,
       startDate,
-      endDate
+      endDate,
+      targetBarangays
     } = req.body;
 
     const attachments = req.files
       ? (req.files as Express.Multer.File[]).map(file => `/uploads/announcements/${file.filename}`)
       : [];
+
+    // Parse targetBarangays if it's a string
+    let barangayList: string[] = [];
+    if (targetBarangays) {
+      if (typeof targetBarangays === 'string') {
+        try {
+          barangayList = JSON.parse(targetBarangays);
+        } catch {
+          barangayList = targetBarangays.split(',').map((b: string) => b.trim()).filter(Boolean);
+        }
+      } else if (Array.isArray(targetBarangays)) {
+        barangayList = targetBarangays;
+      }
+    }
 
     const announcement = await prisma.announcement.create({
       data: {
@@ -123,6 +152,7 @@ export const createAnnouncement = async (req: AuthRequest, res: Response) => {
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         attachments,
+        targetBarangays: barangayList,
         createdBy: req.user!.id
       }
     });
@@ -151,6 +181,17 @@ export const updateAnnouncement = async (req: AuthRequest, res: Response) => {
     if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
     if (updateData.isPinned !== undefined) {
       updateData.isPinned = updateData.isPinned === 'true' || updateData.isPinned === true;
+    }
+
+    // Parse targetBarangays if present
+    if (updateData.targetBarangays) {
+      if (typeof updateData.targetBarangays === 'string') {
+        try {
+          updateData.targetBarangays = JSON.parse(updateData.targetBarangays);
+        } catch {
+          updateData.targetBarangays = updateData.targetBarangays.split(',').map((b: string) => b.trim()).filter(Boolean);
+        }
+      }
     }
 
     if (req.files && (req.files as Express.Multer.File[]).length > 0) {

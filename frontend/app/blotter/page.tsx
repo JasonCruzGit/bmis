@@ -55,12 +55,13 @@ export default function BlotterPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [residentTypeFilter, setResidentTypeFilter] = useState<string>('')
   const [selectedEntry, setSelectedEntry] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: blotterData, isLoading } = useQuery(
-    ['blotter', page, searchQuery, categoryFilter, statusFilter],
+    ['blotter', page, searchQuery, categoryFilter, statusFilter, residentTypeFilter],
     async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -71,6 +72,9 @@ export default function BlotterPage() {
       }
       if (statusFilter) {
         params.append('status', statusFilter)
+      }
+      if (residentTypeFilter) {
+        params.append('residentType', residentTypeFilter)
       }
       if (searchQuery) {
         params.append('search', searchQuery)
@@ -121,7 +125,14 @@ export default function BlotterPage() {
 
   const handleExport = async () => {
     try {
-      const response = await api.get('/blotter/export?format=xlsx', {
+      const params = new URLSearchParams({
+        format: 'xlsx',
+      })
+      if (categoryFilter) params.append('category', categoryFilter)
+      if (statusFilter) params.append('status', statusFilter)
+      if (residentTypeFilter) params.append('residentType', residentTypeFilter)
+
+      const response = await api.get(`/blotter/export?${params.toString()}`, {
         responseType: 'blob',
       })
       const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -207,6 +218,19 @@ export default function BlotterPage() {
               </div>
             </div>
             <div className="flex gap-3">
+              <select
+                value={residentTypeFilter}
+                onChange={(e) => {
+                  setResidentTypeFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg hover:bg-white/30 transition-colors shadow-sm font-semibold"
+                title="Filter report by resident type"
+              >
+                <option value="" className="text-gray-900">All Types</option>
+                <option value="RESIDENT" className="text-gray-900">Residents</option>
+                <option value="NON_RESIDENT" className="text-gray-900">Non-Residents</option>
+              </select>
               <button
                 onClick={handleExport}
                 className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm text-white border border-white/30 rounded-lg hover:bg-white/30 transition-colors shadow-sm font-semibold"
@@ -304,7 +328,7 @@ export default function BlotterPage() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters || categoryFilter || statusFilter
+                  showFilters || categoryFilter || statusFilter || residentTypeFilter
                     ? 'bg-primary-50 border-primary-300 text-primary-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -336,7 +360,7 @@ export default function BlotterPage() {
           {/* Filter Panel */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category
@@ -373,11 +397,29 @@ export default function BlotterPage() {
                     ))}
                   </select>
                 </div>
-                <div className="sm:col-span-2 flex items-end">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Resident Type
+                  </label>
+                  <select
+                    value={residentTypeFilter}
+                    onChange={(e) => {
+                      setResidentTypeFilter(e.target.value)
+                      setPage(1)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">All</option>
+                    <option value="RESIDENT">Residents</option>
+                    <option value="NON_RESIDENT">Non-Residents</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3 flex items-end">
                   <button
                     onClick={() => {
                       setCategoryFilter('')
                       setStatusFilter('')
+                      setResidentTypeFilter('')
                       setShowFilters(false)
                     }}
                     className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"

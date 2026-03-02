@@ -90,6 +90,29 @@ export default function IncidentsPage() {
     updateStatusMutation.mutate({ id: incidentId, status: newStatus })
   }
 
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams({ format: 'xlsx' })
+      if (statusFilter) {
+        params.append('status', statusFilter)
+      }
+
+      const response = await api.get(`/incidents/export?${params.toString()}`, {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `incidents-report-${Date.now()}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success('Incidents report exported successfully')
+    } catch {
+      toast.error('Failed to export incidents report')
+    }
+  }
+
   const incidents = incidentsData?.incidents || []
   const pagination = incidentsData?.pagination
 
@@ -244,7 +267,10 @@ export default function IncidentsPage() {
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </button>
-              <button className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+              <button
+                onClick={handleExport}
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </button>

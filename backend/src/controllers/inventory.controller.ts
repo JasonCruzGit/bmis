@@ -9,19 +9,52 @@ const prisma = new PrismaClient();
 
 export const getInventoryItems = async (req: AuthRequest, res: Response) => {
   try {
-    const { page = '1', limit = '50', category, lowStock, search } = req.query;
+    const { page = '1', limit = '50', category, lowStock, search, barangay } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const user = req.user!;
 
     const where: any = {};
     if (category) where.category = { contains: category as string, mode: 'insensitive' };
     
+    // Filter by barangay for non-ADMIN users
+    // ADMIN can see all items from all barangays, or filter by specific barangay
+    // BARANGAY_CHAIRMAN with barangay assigned can only see their barangay's items
+    // Items with NULL barangay are only visible to ADMIN
+    if (user.role !== 'ADMIN') {
+      if (user.barangay) {
+        // Only show items that match the user's barangay (exclude NULL barangay items)
+        where.barangay = user.barangay;
+      } else {
+        // If user has no barangay assigned, they shouldn't see any items
+        // Use an impossible condition to return no results
+        where.id = '00000000-0000-0000-0000-000000000000';
+      }
+    } else {
+      // ADMIN can filter by specific barangay if provided
+      if (barangay) {
+        where.barangay = barangay as string;
+      }
+    }
+    
     if (search) {
-      where.OR = [
+      // When searching, ensure barangay filter is still applied
+      const searchConditions = [
         { itemName: { contains: search as string, mode: 'insensitive' } },
         { category: { contains: search as string, mode: 'insensitive' } },
         { location: { contains: search as string, mode: 'insensitive' } },
         { qrCode: { contains: search as string, mode: 'insensitive' } }
       ];
+      
+      // If barangay filter is already set, combine it with search using AND
+      if (where.barangay) {
+        where.AND = [
+          { barangay: where.barangay },
+          { OR: searchConditions }
+        ];
+        delete where.barangay; // Remove from top level since it's now in AND
+      } else {
+        where.OR = searchConditions;
+      }
     }
     
     // For low stock filtering, we need to fetch all items and filter in memory
@@ -33,6 +66,13 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
         include: {
           _count: {
             select: { logs: true }
+          },
+          creator: {
+            select: {
+              firstName: true,
+              lastName: true,
+              barangay: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' }
@@ -66,6 +106,13 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
       include: {
         _count: {
           select: { logs: true }
+        },
+        creator: {
+          select: {
+            firstName: true,
+            lastName: true,
+            barangay: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -90,6 +137,7 @@ export const getInventoryItems = async (req: AuthRequest, res: Response) => {
 export const getInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
 
     const item = await prisma.inventoryItem.findUnique({
       where: { id },
@@ -105,12 +153,26 @@ export const getInventoryItem = async (req: AuthRequest, res: Response) => {
               }
             }
           }
+        },
+        creator: {
+          select: {
+            firstName: true,
+            lastName: true,
+            barangay: true
+          }
         }
       }
     });
 
     if (!item) {
       return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    // Check access: non-ADMIN users can only view items from their barangay
+    if (user.role !== 'ADMIN') {
+      if (item.barangay !== user.barangay) {
+        return res.status(403).json({ message: 'You can only view items from your barangay' });
+      }
     }
 
     res.json(item);
@@ -150,6 +212,8 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
     const qrCodeUrl = `${frontendUrl}/public/inventory/${qrData}`;
     await generateQR(qrCodeUrl, qrCodePath);
 
+    const user = req.user!;
+    
     const item = await prisma.inventoryItem.create({
       data: {
         itemName,
@@ -160,6 +224,8 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
         location: location || null,
         notes: notes || null,
         qrCode: qrData,
+        barangay: user.barangay || null,
+        createdBy: user.id,
         ...(photoPath && { photo: photoPath })
       }
     });
@@ -182,6 +248,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
 export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
     const updateData: any = { ...req.body };
 
     if (updateData.quantity) updateData.quantity = parseInt(updateData.quantity);
@@ -205,6 +272,15 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
     
     if (!oldItem) {
       return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    // Check access: non-ADMIN users can only update items from their barangay
+    if (user.role !== 'ADMIN') {
+      if (oldItem.barangay !== user.barangay) {
+        return res.status(403).json({ message: 'You can only update items from your barangay' });
+      }
+      // Prevent non-ADMIN users from changing barangay
+      delete updateData.barangay;
     }
 
     const item = await prisma.inventoryItem.update({
@@ -233,6 +309,20 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
 export const deleteInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
+
+    const item = await prisma.inventoryItem.findUnique({ where: { id } });
+    
+    if (!item) {
+      return res.status(404).json({ message: 'Inventory item not found' });
+    }
+
+    // Check access: non-ADMIN users can only delete items from their barangay
+    if (user.role !== 'ADMIN') {
+      if (item.barangay !== user.barangay) {
+        return res.status(403).json({ message: 'You can only delete items from your barangay' });
+      }
+    }
 
     await prisma.inventoryItem.delete({
       where: { id }

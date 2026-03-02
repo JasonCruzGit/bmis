@@ -32,6 +32,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { getFileUrl } from '@/lib/utils'
 import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
 
 export default function ResidentsPage() {
   const searchParams = useSearchParams()
@@ -43,6 +44,7 @@ export default function ResidentsPage() {
   const [civilStatusFilter, setCivilStatusFilter] = useState<string>('')
   const [pwdFilter, setPwdFilter] = useState<string>('')
   const [youthFilter, setYouthFilter] = useState<boolean>(false)
+  const [teenagerFilter, setTeenagerFilter] = useState<boolean>(false)
   const [barangayFilter, setBarangayFilter] = useState<string>('')
   const [selectedResident, setSelectedResident] = useState<any>(null)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -55,14 +57,25 @@ export default function ResidentsPage() {
   // Handle URL query parameters (e.g., from dashboard breakdown)
   useEffect(() => {
     const barangayParam = searchParams.get('barangay')
+    const youthParam = searchParams.get('youth')
+    const teenagerParam = searchParams.get('teenager')
+    const pwdParam = searchParams.get('isPWD')
+
+    setYouthFilter(youthParam === 'true')
+    setTeenagerFilter(teenagerParam === 'true')
+    setPwdFilter(pwdParam === 'true' ? 'true' : pwdParam === 'false' ? 'false' : '')
+
     if (barangayParam) {
       setBarangayFilter(barangayParam)
       setShowFilters(true) // Auto-show filters when a barangay is pre-selected
+    } else if (youthParam === 'true' || teenagerParam === 'true' || pwdParam === 'true' || pwdParam === 'false') {
+      setShowFilters(true)
+      setBarangayFilter('')
     }
   }, [searchParams])
 
   const { data: residentsData, isLoading } = useQuery(
-    ['residents', page, searchQuery, statusFilter, civilStatusFilter, pwdFilter, youthFilter, barangayFilter],
+    ['residents', page, searchQuery, statusFilter, civilStatusFilter, pwdFilter, youthFilter, teenagerFilter, barangayFilter],
     async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -82,6 +95,9 @@ export default function ResidentsPage() {
       }
       if (youthFilter) {
         params.append('youth', 'true')
+      }
+      if (teenagerFilter) {
+        params.append('teenager', 'true')
       }
       if (barangayFilter) {
         params.append('barangay', barangayFilter)
@@ -119,6 +135,9 @@ export default function ResidentsPage() {
     }
     if (youthFilter) {
       params.append('youth', 'true')
+    }
+    if (teenagerFilter) {
+      params.append('teenager', 'true')
     }
     if (barangayFilter) {
       params.append('barangay', barangayFilter)
@@ -275,6 +294,94 @@ export default function ResidentsPage() {
     }
   }
 
+  const handleExportPDF = async () => {
+    try {
+      toast.loading('Exporting to PDF...')
+      setShowExportDropdown(false)
+      
+      // Dynamically import jspdf-autotable to avoid SSR issues
+      const autoTableModule = await import('jspdf-autotable')
+      
+      const residents = await fetchResidentsForExport()
+      
+      if (residents.length === 0) {
+        toast.dismiss()
+        toast.error('No residents to export')
+        return
+      }
+      
+      const exportData = prepareExportData(residents)
+      
+      // Create PDF document
+      const doc = new jsPDF('landscape', 'mm', 'a4')
+      
+      // Add title
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Residents Report', 14, 15)
+      
+      // Add export date
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Exported on: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, 22)
+      doc.text(`Total Residents: ${residents.length}`, 14, 27)
+      
+      // Prepare table data
+      const tableData = exportData.map((row: any) => [
+        row['First Name'],
+        row['Last Name'],
+        row['Date of Birth'],
+        row['Age'],
+        row['Sex'],
+        row['Civil Status'],
+        row['Barangay'],
+        row['Contact Number'],
+        row['Residency Status']
+      ])
+      
+      const autoTableOptions = {
+        head: [['First Name', 'Last Name', 'Date of Birth', 'Age', 'Sex', 'Civil Status', 'Barangay', 'Contact', 'Status']],
+        body: tableData,
+        startY: 35,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        margin: { top: 35 },
+        didDrawPage: (data: any) => {
+          // Add page number
+          doc.setFontSize(8)
+          doc.text(
+            `Page ${data.pageNumber}`,
+            doc.internal.pageSize.getWidth() - 20,
+            doc.internal.pageSize.getHeight() - 10
+          )
+        }
+      }
+
+      // Support both plugin styles:
+      // 1) autoTable(doc, options) export
+      // 2) doc.autoTable(options) prototype extension
+      const autoTableFn = (autoTableModule as any).default || (autoTableModule as any).autoTable
+      if (typeof autoTableFn === 'function') {
+        autoTableFn(doc, autoTableOptions)
+      } else if (typeof (doc as any).autoTable === 'function') {
+        ;(doc as any).autoTable(autoTableOptions)
+      } else {
+        throw new Error('jspdf-autotable failed to initialize')
+      }
+      
+      // Save PDF
+      doc.save(`residents_export_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.pdf`)
+      
+      toast.dismiss()
+      toast.success(`Successfully exported ${residents.length} residents to PDF`)
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error('Failed to export to PDF')
+      console.error('PDF Export error:', error)
+    }
+  }
+
   const archiveMutation = useMutation(
     (id: string) => api.patch(`/residents/${id}/archive`),
     {
@@ -393,7 +500,7 @@ export default function ResidentsPage() {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`flex items-center px-4 py-2 rounded-lg border transition-colors ${
-                  showFilters || statusFilter || civilStatusFilter || pwdFilter || youthFilter || barangayFilter
+                  showFilters || statusFilter || civilStatusFilter || pwdFilter || youthFilter || teenagerFilter || barangayFilter
                     ? 'bg-primary-50 border-primary-300 text-primary-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -445,10 +552,17 @@ export default function ResidentsPage() {
                       </button>
                       <button
                         onClick={handleExportExcel}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center border-b border-gray-100"
                       >
                         <FileText className="h-4 w-4 mr-2 text-green-600" />
                         Export as Excel
+                      </button>
+                      <button
+                        onClick={handleExportPDF}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                      >
+                        <FileText className="h-4 w-4 mr-2 text-red-600" />
+                        Export as PDF
                       </button>
                     </div>
                   </>
@@ -474,9 +588,8 @@ export default function ResidentsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                   >
                     <option value="">All Status</option>
-                    <option value="NEW">New</option>
-                    <option value="RETURNING">Returning</option>
-                    <option value="TRANSFERRED">Transferred</option>
+                    <option value="RESIDENT">Resident</option>
+                    <option value="INSTITUTIONAL_HOUSEHOLD">Institutional Household</option>
                   </select>
                 </div>
                 <div>
@@ -553,6 +666,20 @@ export default function ResidentsPage() {
                   <label className="flex items-center gap-2 p-3 border-2 border-gray-300 rounded-lg hover:border-primary-300 transition-all cursor-pointer bg-white w-full">
                     <input
                       type="checkbox"
+                      checked={teenagerFilter}
+                      onChange={(e) => {
+                        setTeenagerFilter(e.target.checked)
+                        setPage(1)
+                      }}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Teenager (13-19 years old)</span>
+                  </label>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 p-3 border-2 border-gray-300 rounded-lg hover:border-primary-300 transition-all cursor-pointer bg-white w-full">
+                    <input
+                      type="checkbox"
                       checked={youthFilter}
                       onChange={(e) => {
                         setYouthFilter(e.target.checked)
@@ -570,6 +697,7 @@ export default function ResidentsPage() {
                       setCivilStatusFilter('')
                       setPwdFilter('')
                       setYouthFilter(false)
+                      setTeenagerFilter(false)
                       setBarangayFilter('')
                       setShowFilters(false)
                     }}
@@ -656,11 +784,13 @@ export default function ResidentsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${
-                            resident.residencyStatus === 'NEW' ? 'bg-green-100 text-green-800' :
-                            resident.residencyStatus === 'RETURNING' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            resident.residencyStatus === 'RESIDENT' ? 'bg-green-100 text-green-800' :
+                            resident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
                           }`}>
-                            {resident.residencyStatus}
+                            {resident.residencyStatus === 'RESIDENT' ? 'Resident' : 
+                             resident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'Institutional Household' : 
+                             resident.residencyStatus}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -730,11 +860,13 @@ export default function ResidentsPage() {
                         </div>
                       </div>
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        resident.residencyStatus === 'NEW' ? 'bg-green-100 text-green-800' :
-                        resident.residencyStatus === 'RETURNING' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        resident.residencyStatus === 'RESIDENT' ? 'bg-green-100 text-green-800' :
+                        resident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {resident.residencyStatus}
+                        {resident.residencyStatus === 'RESIDENT' ? 'Resident' : 
+                         resident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'Institutional Household' : 
+                         resident.residencyStatus}
                       </span>
                     </div>
                     <div className="space-y-2 mb-4">
@@ -851,11 +983,13 @@ export default function ResidentsPage() {
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                        selectedResident.residencyStatus === 'NEW' ? 'bg-green-100 text-green-800' :
-                        selectedResident.residencyStatus === 'RETURNING' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        selectedResident.residencyStatus === 'RESIDENT' ? 'bg-green-100 text-green-800' :
+                        selectedResident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
-                        {selectedResident.residencyStatus}
+                        {selectedResident.residencyStatus === 'RESIDENT' ? 'Resident' : 
+                         selectedResident.residencyStatus === 'INSTITUTIONAL_HOUSEHOLD' ? 'Institutional Household' : 
+                         selectedResident.residencyStatus}
                       </span>
                       <span className="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-full">
                         {selectedResident.civilStatus}

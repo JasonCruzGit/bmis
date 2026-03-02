@@ -30,10 +30,14 @@ export default function NewBlotterPage() {
   const router = useRouter()
   const { hydrated } = useAuthStore()
   const queryClient = useQueryClient()
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [residentSearch, setResidentSearch] = useState('')
   const [selectedResident, setSelectedResident] = useState<any>(null)
   const [showResidentSearch, setShowResidentSearch] = useState(false)
+  const [residentType, setResidentType] = useState<'RESIDENT' | 'NON_RESIDENT'>('RESIDENT')
+  const [nonResidentName, setNonResidentName] = useState('')
+  const [nonResidentAddress, setNonResidentAddress] = useState('')
 
   const [formData, setFormData] = useState({
     residentId: '',
@@ -58,6 +62,10 @@ export default function NewBlotterPage() {
   )
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     if (hydrated && !useAuthStore.getState().user) {
       router.push('/login')
     }
@@ -78,15 +86,24 @@ export default function NewBlotterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.residentId) {
+    if (residentType === 'RESIDENT' && !formData.residentId) {
       toast.error('Please select a resident')
+      return
+    }
+    if (residentType === 'NON_RESIDENT' && !nonResidentName.trim()) {
+      toast.error('Please enter non-resident name')
       return
     }
 
     setLoading(true)
 
     try {
-      await api.post('/blotter', formData)
+      await api.post('/blotter', {
+        ...formData,
+        residentType,
+        nonResidentName: residentType === 'NON_RESIDENT' ? nonResidentName.trim() : undefined,
+        nonResidentAddress: residentType === 'NON_RESIDENT' ? nonResidentAddress.trim() : undefined,
+      })
 
       toast.success('Blotter entry created successfully!')
       queryClient.invalidateQueries('blotter')
@@ -98,7 +115,7 @@ export default function NewBlotterPage() {
     }
   }
 
-  if (!hydrated) {
+  if (!mounted || !hydrated) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -134,6 +151,59 @@ export default function NewBlotterPage() {
           {/* Resident Selection */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Resident Information</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Person Type</label>
+              <select
+                value={residentType}
+                onChange={(e) => {
+                  const nextType = e.target.value as 'RESIDENT' | 'NON_RESIDENT'
+                  setResidentType(nextType)
+                  if (nextType === 'NON_RESIDENT') {
+                    setSelectedResident(null)
+                    setFormData(prev => ({ ...prev, residentId: '' }))
+                    setShowResidentSearch(false)
+                    setResidentSearch('')
+                  } else {
+                    setNonResidentName('')
+                    setNonResidentAddress('')
+                  }
+                }}
+                className="w-full md:w-72 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800"
+              >
+                <option value="RESIDENT">Resident</option>
+                <option value="NON_RESIDENT">Non-Resident</option>
+              </select>
+            </div>
+
+            {residentType === 'NON_RESIDENT' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Non-Resident Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nonResidentName}
+                    onChange={(e) => setNonResidentName(e.target.value)}
+                    placeholder="Enter full name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
+                    required={residentType === 'NON_RESIDENT'}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Non-Resident Address
+                  </label>
+                  <input
+                    type="text"
+                    value={nonResidentAddress}
+                    onChange={(e) => setNonResidentAddress(e.target.value)}
+                    placeholder="Enter address (optional)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+            ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Resident <span className="text-red-500">*</span>
@@ -177,7 +247,7 @@ export default function NewBlotterPage() {
                         setShowResidentSearch(true)
                       }}
                       onFocus={() => setShowResidentSearch(true)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
                     />
                   </div>
                   {showResidentSearch && residents.length > 0 && (
@@ -214,6 +284,7 @@ export default function NewBlotterPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Entry Information */}
@@ -229,7 +300,7 @@ export default function NewBlotterPage() {
                   value={formData.category}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800"
                 >
                   {BLOTTER_CATEGORIES.map(cat => (
                     <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -246,7 +317,7 @@ export default function NewBlotterPage() {
                   value={formData.incidentDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800"
                 />
               </div>
               <div className="md:col-span-2">
@@ -257,7 +328,7 @@ export default function NewBlotterPage() {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800"
                 >
                   {BLOTTER_STATUSES.map(status => (
                     <option key={status.value} value={status.value}>{status.label}</option>
@@ -281,7 +352,7 @@ export default function NewBlotterPage() {
                 required
                 rows={8}
                 placeholder="Provide a detailed description of the incident..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -299,7 +370,7 @@ export default function NewBlotterPage() {
                 onChange={handleInputChange}
                 rows={6}
                 placeholder="Describe any actions taken regarding this incident..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
               />
             </div>
           </div>

@@ -99,10 +99,24 @@ export default function PortalDashboardPage() {
     { enabled: !!resident }
   )
 
-  const { data: announcementsData } = useQuery('public-announcements', async () => {
-    const { data } = await portalApi.get('/announcements?limit=10')
-    return data
-  })
+  const { data: messagesData } = useQuery(
+    'my-direct-messages',
+    async () => {
+      const { data } = await portalApi.get('/messages?limit=100')
+      return data
+    },
+    { enabled: !!resident }
+  )
+
+  const { data: announcementsData } = useQuery(
+    ['public-announcements', resident?.barangay],
+    async () => {
+      const barangayParam = resident?.barangay ? `&barangay=${encodeURIComponent(resident.barangay)}` : ''
+      const { data } = await portalApi.get(`/announcements?limit=10${barangayParam}`)
+      return data
+    },
+    { enabled: !!resident }
+  )
 
   const handleLogout = () => {
     localStorage.removeItem('portal_token')
@@ -190,7 +204,7 @@ export default function PortalDashboardPage() {
           {/* LEFT SIDE - Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               <Link
                 href="/portal/requests/new"
                 className="group relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg hover:shadow-xl p-5 transition-all duration-300 hover:scale-105 overflow-hidden"
@@ -230,6 +244,24 @@ export default function PortalDashboardPage() {
                   {announcementsData?.announcements?.length > 0 && (
                     <div className="absolute -top-2 -right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg">
                       <span className="text-xs font-bold text-purple-600">{announcementsData.announcements.length}</span>
+                    </div>
+                  )}
+                </div>
+              </Link>
+
+              <Link
+                href="/portal/messages"
+                className="group relative bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg hover:shadow-xl p-5 transition-all duration-300 hover:scale-105 overflow-hidden"
+              >
+                <div className="relative">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:rotate-12 transition-transform">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="text-white font-bold text-sm">Direct Messages</h3>
+                  <p className="text-emerald-100 text-xs mt-1">Inbox from admin</p>
+                  {messagesData?.messages?.length > 0 && (
+                    <div className="absolute -top-2 -right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-xs font-bold text-emerald-700">{messagesData.messages.length}</span>
                     </div>
                   )}
                 </div>

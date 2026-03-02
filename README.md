@@ -116,8 +116,4 @@ BIS/
 
 ## 📝 License
 
-Private - All rights reserved
-
-## 👥 Support
-
-For issues and questions, please contact the development team.
+Private - All rights reserved## 👥 SupportFor issues and questions, please contact the development team.

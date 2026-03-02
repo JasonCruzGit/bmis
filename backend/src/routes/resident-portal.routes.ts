@@ -8,9 +8,10 @@ import {
   getRequestDetails,
   submitComplaint,
   getMyComplaints,
+  getMyDirectMessages,
+  markMyDirectMessageViewed,
   getPublicAnnouncements,
   getDocumentTypes,
-  paymentCallback,
 } from '../controllers/resident-portal.controller';
 import { authenticateResident } from '../middleware/resident-auth.middleware';
 
@@ -31,7 +32,8 @@ router.get('/requests/:id', getRequestDetails);
 router.post('/requests', createDocumentRequest);
 router.get('/complaints', getMyComplaints);
 router.post('/complaints', submitComplaint);
-router.post('/payment/callback', paymentCallback);
+router.get('/messages', getMyDirectMessages);
+router.patch('/messages/:id/view', markMyDirectMessageViewed);
 
 export default router;
 

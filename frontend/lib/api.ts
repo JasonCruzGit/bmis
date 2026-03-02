@@ -21,13 +21,27 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // Remove Content-Type header for FormData - let browser set it with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
   return config
 })
 
-// Handle token expiration
+// Handle token expiration and network errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle network errors
+    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      console.error('🌐 Network Error:', {
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config?.baseURL + error.config?.url,
+        message: 'Cannot connect to backend server. Please ensure the backend is running.'
+      })
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')

@@ -2,17 +2,52 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest, createAuditLog } from '../middleware/auth.middleware';
 import { generateQRCodeDataURL } from '../utils/qrGenerator';
+import os from 'os';
 
 const prisma = new PrismaClient();
+const PH_MOBILE_REGEX = /^09\d{9}$/;
+const isValidPhilippineMobile = (value: string) => PH_MOBILE_REGEX.test(String(value || '').trim());
 
-// Helper function to generate QR code data for resident
-const generateResidentQRCode = (qrCode: string): string => {
-  // Always use production URL for QR codes so they work when scanned
-  // QR codes should point to the deployed site, not localhost
-  const productionUrl = 'https://frontend-blush-chi-30.vercel.app';
-  
-  // Remove trailing slash if present
-  const cleanUrl = productionUrl.replace(/\/$/, '');
+const getLocalNetworkIp = (): string | null => {
+  const interfaces = os.networkInterfaces();
+  for (const iface of Object.values(interfaces)) {
+    if (!iface) continue;
+    for (const entry of iface) {
+      if ((entry.family === 'IPv4' || entry.family === 4) && !entry.internal) {
+        return entry.address;
+      }
+    }
+  }
+  return null;
+};
+
+const resolveFrontendBaseUrl = (req?: Request): string => {
+  const envUrl = process.env.FRONTEND_URL?.trim();
+  const isEnvLocalhost = !!envUrl && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(envUrl);
+  if (envUrl && !isEnvLocalhost) return envUrl.replace(/\/$/, '');
+
+  const forwardedHost = req?.headers['x-forwarded-host'];
+  const rawHost = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req?.headers.host || '';
+  const host = rawHost.split(',')[0]?.trim();
+
+  if (host && !/^localhost(?::\d+)?$/i.test(host) && !/^127\.0\.0\.1(?::\d+)?$/.test(host)) {
+    const forwardedProto = req?.headers['x-forwarded-proto'];
+    const proto = (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) || req?.protocol || 'http';
+    const hostname = host.includes(':') ? host.split(':')[0] : host;
+    return `${proto}://${hostname}:3000`;
+  }
+
+  const localIp = getLocalNetworkIp();
+  if (localIp) {
+    return `http://${localIp}:3000`;
+  }
+
+  return 'http://localhost:3000';
+};
+
+// Helper function to generate QR code link for resident
+const generateResidentQRCode = (qrCode: string, req?: Request): string => {
+  const cleanUrl = resolveFrontendBaseUrl(req).replace(/\/$/, '');
   return `${cleanUrl}/public/resident/${qrCode}`;
 };
 
@@ -26,13 +61,25 @@ export const getResidents = async (req: AuthRequest, res: Response) => {
       civilStatus,
       isPWD,
       youth,
+      teenager,
       barangay
     } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const user = req.user!;
 
     const where: any = {
       isArchived: archived === 'true'
     };
+
+    // Restrict non-ADMIN users to their assigned barangay only
+    if (user.role !== 'ADMIN') {
+      if (user.barangay) {
+        where.barangay = user.barangay;
+      } else {
+        // User has no barangay assigned, return no data
+        where.id = '00000000-0000-0000-0000-000000000000';
+      }
+    }
 
     // Filter by residency status
     if (residencyStatus) {
@@ -55,6 +102,17 @@ export const getResidents = async (req: AuthRequest, res: Response) => {
       const today = new Date();
       const maxDate = new Date(today.getFullYear() - 15, today.getMonth(), today.getDate());
       const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+      where.dateOfBirth = {
+        gte: minDate,
+        lte: maxDate
+      };
+    }
+
+    // Filter by Teenager (13-19 years old)
+    if (teenager === 'true') {
+      const today = new Date();
+      const maxDate = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate());
+      const minDate = new Date(today.getFullYear() - 19, today.getMonth(), today.getDate());
       where.dateOfBirth = {
         gte: minDate,
         lte: maxDate
@@ -96,6 +154,7 @@ export const getResidents = async (req: AuthRequest, res: Response) => {
 export const getResident = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
 
     const resident = await prisma.resident.findUnique({
       where: { id },
@@ -112,6 +171,10 @@ export const getResident = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Resident not found' });
     }
 
+    if (user.role !== 'ADMIN' && resident.barangay !== user.barangay) {
+      return res.status(403).json({ message: 'You can only view residents from your barangay' });
+    }
+
     res.json(resident);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -120,6 +183,7 @@ export const getResident = async (req: AuthRequest, res: Response) => {
 
 export const createResident = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user!;
     const {
       firstName,
       middleName,
@@ -130,6 +194,15 @@ export const createResident = async (req: AuthRequest, res: Response) => {
       civilStatus,
       barangay,
       address,
+      purokSitio,
+      municipality,
+      province,
+      streetSubdivision,
+      zone,
+      houseBuildingNumber,
+      unitNumber,
+      latitude,
+      longitude,
       contactNo,
       occupation,
       education,
@@ -140,6 +213,17 @@ export const createResident = async (req: AuthRequest, res: Response) => {
     } = req.body;
 
     const idPhoto = req.file ? `/uploads/residents/${req.file.filename}` : null;
+    const assignedBarangay = user.role === 'ADMIN' ? (barangay || null) : user.barangay;
+
+    if (user.role !== 'ADMIN' && !assignedBarangay) {
+      return res.status(403).json({ message: 'Your account has no assigned barangay' });
+    }
+
+    if (!isValidPhilippineMobile(contactNo)) {
+      return res.status(400).json({
+        message: 'Contact Number must be a valid Philippine mobile number (09XXXXXXXXX)'
+      });
+    }
 
     // Generate unique QR code identifier
     const qrCodeId = `RES-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -156,15 +240,24 @@ export const createResident = async (req: AuthRequest, res: Response) => {
           dateOfBirth: new Date(dateOfBirth),
           sex,
           civilStatus,
-          barangay: barangay || null,
+          barangay: assignedBarangay,
           address,
+          purokSitio: purokSitio || null,
+          municipality: municipality || null,
+          province: province || null,
+          streetSubdivision: streetSubdivision || null,
+          zone: zone || null,
+          houseBuildingNumber: houseBuildingNumber || null,
+          unitNumber: unitNumber || null,
+          latitude: latitude ? parseFloat(latitude as string) : null,
+          longitude: longitude ? parseFloat(longitude as string) : null,
           contactNo,
           occupation: occupation || null,
           education: education || null,
           lengthOfStay: lengthOfStay || null,
           isPWD: isPWD === 'true' || isPWD === true,
           householdId: householdId || null,
-          residencyStatus: residencyStatus || 'NEW',
+          residencyStatus: residencyStatus || 'RESIDENT',
           idPhoto,
           qrCode: qrCodeId
         },
@@ -185,15 +278,22 @@ export const createResident = async (req: AuthRequest, res: Response) => {
             dateOfBirth: new Date(dateOfBirth),
             sex,
             civilStatus,
-            barangay: barangay || null,
+            barangay: assignedBarangay,
             address,
+            purokSitio: purokSitio || null,
+            municipality: municipality || null,
+            province: province || null,
+            streetSubdivision: streetSubdivision || null,
+            zone: zone || null,
+            houseBuildingNumber: houseBuildingNumber || null,
+            unitNumber: unitNumber || null,
             contactNo,
             occupation: occupation || null,
             education: education || null,
             lengthOfStay: lengthOfStay || null,
             isPWD: isPWD === 'true' || isPWD === true,
             householdId: householdId || null,
-            residencyStatus: residencyStatus || 'NEW',
+            residencyStatus: residencyStatus || 'RESIDENT',
             idPhoto
           },
           include: {
@@ -223,6 +323,7 @@ export const createResident = async (req: AuthRequest, res: Response) => {
 export const updateResident = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
     const updateData: any = { ...req.body };
 
     if (req.file) {
@@ -238,10 +339,24 @@ export const updateResident = async (req: AuthRequest, res: Response) => {
       updateData.isPWD = updateData.isPWD === 'true' || updateData.isPWD === true;
     }
 
+    if (updateData.contactNo !== undefined && !isValidPhilippineMobile(updateData.contactNo)) {
+      return res.status(400).json({
+        message: 'Contact Number must be a valid Philippine mobile number (09XXXXXXXXX)'
+      });
+    }
+
     const oldResident = await prisma.resident.findUnique({ where: { id } });
     
     if (!oldResident) {
       return res.status(404).json({ message: 'Resident not found' });
+    }
+
+    if (user.role !== 'ADMIN') {
+      if (oldResident.barangay !== user.barangay) {
+        return res.status(403).json({ message: 'You can only update residents from your barangay' });
+      }
+      // Prevent non-ADMIN users from changing barangay
+      delete updateData.barangay;
     }
 
     const resident = await prisma.resident.update({
@@ -273,6 +388,20 @@ export const updateResident = async (req: AuthRequest, res: Response) => {
 export const archiveResident = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
+
+    const existingResident = await prisma.resident.findUnique({
+      where: { id },
+      select: { id: true, barangay: true }
+    });
+
+    if (!existingResident) {
+      return res.status(404).json({ message: 'Resident not found' });
+    }
+
+    if (user.role !== 'ADMIN' && existingResident.barangay !== user.barangay) {
+      return res.status(403).json({ message: 'You can only archive residents from your barangay' });
+    }
 
     const resident = await prisma.resident.update({
       where: { id },
@@ -297,6 +426,7 @@ export const archiveResident = async (req: AuthRequest, res: Response) => {
 export const searchResidents = async (req: AuthRequest, res: Response) => {
   try {
     const { q, householdNumber } = req.query;
+    const user = req.user!;
 
     if (!q && !householdNumber) {
       return res.status(400).json({ message: 'Search query or household number is required' });
@@ -305,6 +435,14 @@ export const searchResidents = async (req: AuthRequest, res: Response) => {
     const where: any = {
       isArchived: false
     };
+
+    if (user.role !== 'ADMIN') {
+      if (user.barangay) {
+        where.barangay = user.barangay;
+      } else {
+        where.id = '00000000-0000-0000-0000-000000000000';
+      }
+    }
 
     if (q) {
       where.OR = [
@@ -360,7 +498,7 @@ export const getResidentQRCode = async (req: AuthRequest, res: Response) => {
     }
 
     // Generate QR code data URL
-    const qrCodeUrl = generateResidentQRCode(qrCodeId);
+    const qrCodeUrl = generateResidentQRCode(qrCodeId, req);
     const qrCodeDataURL = await generateQRCodeDataURL(qrCodeUrl);
 
     res.json({ 

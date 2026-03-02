@@ -30,11 +30,20 @@ export default function EditResidentPage() {
     civilStatus: '',
     barangay: '',
     address: '',
+    purokSitio: '',
+    municipality: '',
+    province: '',
+    streetSubdivision: '',
+    zone: '',
+    houseBuildingNumber: '',
+    unitNumber: '',
+    latitude: '',
+    longitude: '',
     contactNo: '',
     occupation: '',
     education: '',
     householdId: '',
-    residencyStatus: 'NEW',
+    residencyStatus: 'RESIDENT',
     lengthOfStayYears: '',
     lengthOfStayMonths: '',
     isPWD: false,
@@ -77,11 +86,20 @@ export default function EditResidentPage() {
             civilStatus: data.civilStatus || '',
             barangay: data.barangay || '',
             address: data.address || '',
+            purokSitio: data.purokSitio || '',
+            municipality: data.municipality || '',
+            province: data.province || '',
+            streetSubdivision: data.streetSubdivision || '',
+            zone: data.zone || '',
+            houseBuildingNumber: data.houseBuildingNumber || '',
+            unitNumber: data.unitNumber || '',
+            latitude: data.latitude ? data.latitude.toString() : '',
+            longitude: data.longitude ? data.longitude.toString() : '',
             contactNo: data.contactNo || '',
             occupation: data.occupation || '',
             education: data.education || '',
             householdId: data.householdId || '',
-            residencyStatus: data.residencyStatus || 'NEW',
+            residencyStatus: data.residencyStatus || 'RESIDENT',
             lengthOfStayYears: years,
             lengthOfStayMonths: months,
             isPWD: data.isPWD || false,
@@ -252,7 +270,7 @@ export default function EditResidentPage() {
                   value={formData.firstName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -264,7 +282,7 @@ export default function EditResidentPage() {
                   name="middleName"
                   value={formData.middleName}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -277,7 +295,7 @@ export default function EditResidentPage() {
                   value={formData.lastName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -290,7 +308,7 @@ export default function EditResidentPage() {
                   value={formData.suffix}
                   onChange={handleInputChange}
                   placeholder="Jr., Sr., III"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -304,7 +322,7 @@ export default function EditResidentPage() {
                   onChange={handleInputChange}
                   required
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -316,7 +334,7 @@ export default function EditResidentPage() {
                   value={formData.sex}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 >
                   <option value="">Select...</option>
                   <option value="MALE">Male</option>
@@ -332,7 +350,7 @@ export default function EditResidentPage() {
                   value={formData.civilStatus}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 >
                   <option value="">Select...</option>
                   <option value="SINGLE">Single</option>
@@ -351,11 +369,10 @@ export default function EditResidentPage() {
                   value={formData.residencyStatus}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 >
-                  <option value="NEW">New</option>
-                  <option value="RETURNING">Returning</option>
-                  <option value="TRANSFERRED">Transferred</option>
+                  <option value="RESIDENT">Resident</option>
+                  <option value="INSTITUTIONAL_HOUSEHOLD">Institutional Household</option>
                 </select>
               </div>
               <div>
@@ -369,7 +386,7 @@ export default function EditResidentPage() {
                       name="lengthOfStayYears"
                       value={formData.lengthOfStayYears}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                     >
                       <option value="">Years</option>
                       {Array.from({ length: 101 }, (_, i) => (
@@ -384,7 +401,7 @@ export default function EditResidentPage() {
                       name="lengthOfStayMonths"
                       value={formData.lengthOfStayMonths}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                     >
                       <option value="">Months</option>
                       {Array.from({ length: 12 }, (_, i) => (
@@ -428,7 +445,7 @@ export default function EditResidentPage() {
                   value={formData.barangay}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="">Select Barangay</option>
                   <option value="Bagong Bayan">Bagong Bayan</option>
@@ -462,12 +479,131 @@ export default function EditResidentPage() {
                   onChange={handleInputChange}
                   required
                   placeholder="09XX XXX XXXX"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  House/Building Number
+                </label>
+                <input
+                  type="text"
+                  name="houseBuildingNumber"
+                  value={formData.houseBuildingNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter house/building number"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Unit Number
+                </label>
+                <input
+                  type="text"
+                  name="unitNumber"
+                  value={formData.unitNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter unit number"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Street/Subdivision
+                </label>
+                <input
+                  type="text"
+                  name="streetSubdivision"
+                  value={formData.streetSubdivision}
+                  onChange={handleInputChange}
+                  placeholder="Enter street/subdivision"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Zone
+                </label>
+                <input
+                  type="text"
+                  name="zone"
+                  value={formData.zone}
+                  onChange={handleInputChange}
+                  placeholder="Enter zone"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Purok/Sitio
+                </label>
+                <input
+                  type="text"
+                  name="purokSitio"
+                  value={formData.purokSitio}
+                  onChange={handleInputChange}
+                  placeholder="Enter purok/sitio"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Municipality
+                </label>
+                <input
+                  type="text"
+                  name="municipality"
+                  value={formData.municipality}
+                  onChange={handleInputChange}
+                  placeholder="Enter municipality"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Province
+                </label>
+                <input
+                  type="text"
+                  name="province"
+                  value={formData.province}
+                  onChange={handleInputChange}
+                  placeholder="Enter province"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleInputChange}
+                  step="any"
+                  placeholder="e.g., 14.5995"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleInputChange}
+                  step="any"
+                  placeholder="e.g., 120.9842"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address <span className="text-red-500">*</span>
+                  Complete Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="address"
@@ -475,8 +611,10 @@ export default function EditResidentPage() {
                   onChange={handleInputChange}
                   required
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
+                  placeholder="Enter complete address"
                 />
+                <p className="text-xs text-gray-500 mt-1">This field will be used as the main address. You can manually enter or it will be constructed from the fields above.</p>
               </div>
             </div>
           </div>
@@ -494,7 +632,7 @@ export default function EditResidentPage() {
                   name="occupation"
                   value={formData.occupation}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -505,7 +643,7 @@ export default function EditResidentPage() {
                   name="education"
                   value={formData.education}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 >
                   <option value="">Select...</option>
                   <option value="ELEMENTARY">Elementary</option>
@@ -524,7 +662,7 @@ export default function EditResidentPage() {
                   name="householdId"
                   value={formData.householdId}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
                 >
                   <option value="">Select household...</option>
                   {householdsData?.map((household: any) => (

@@ -7,15 +7,28 @@ import { AuthRequest, createAuditLog } from '../middleware/auth.middleware';
 const prisma = new PrismaClient();
 
 export const login = async (req: Request, res: Response) => {
+  console.log('[LOGIN] Request received');
   try {
+    console.log('[LOGIN] Parsing body...');
     const { email, password } = req.body;
+    console.log('[LOGIN] Email:', email);
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        barangay: true,
+        isActive: true
+      }
     });
 
     if (!user || !user.isActive) {
@@ -27,15 +40,6 @@ export const login = async (req: Request, res: Response) => {
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() }
-    });
-
-    // Create audit log
-    await createAuditLog(user.id, 'LOGIN', 'USER', user.id, null, req);
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
@@ -50,24 +54,36 @@ export const login = async (req: Request, res: Response) => {
       expiresIn,
     };
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      jwtSecret,
-      signOptions
-    );
+    // Include barangay in token (can be null for ADMIN users)
+    const tokenPayload: any = {
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    };
+    
+    // Only include barangay if it's not null
+    if (user.barangay) {
+      tokenPayload.barangay = user.barangay;
+    }
 
-    res.json({
+    const token = jwt.sign(tokenPayload, jwtSecret, signOptions);
+
+    return res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role
+        role: user.role,
+        barangay: user.barangay
       }
     });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error('Login error:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ message: error.message || 'Internal server error' });
+    }
   }
 };
 
@@ -126,6 +142,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         firstName: true,
         lastName: true,
         role: true,
+        barangay: true,
         isActive: true,
         lastLogin: true
       }

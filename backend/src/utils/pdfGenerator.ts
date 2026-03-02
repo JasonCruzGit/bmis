@@ -23,6 +23,45 @@ export const generateCertificatePDF = async (
     
     doc.pipe(stream);
 
+    // Try to add logo
+    const logoPaths = [
+      path.join(__dirname, '../../assets/logo.png'),
+      path.join(__dirname, '../../../frontend/public/logo.png'),
+      path.join(process.cwd(), 'assets/logo.png'),
+      path.join(process.cwd(), 'frontend/public/logo.png'),
+    ];
+
+    let logoAdded = false;
+    let logoY = 50; // Starting Y position
+    const logoSize = 70; // Size in points
+    
+    for (const logoPath of logoPaths) {
+      if (fs.existsSync(logoPath)) {
+        try {
+          // Add logo at the top center
+          const pageWidth = doc.page.width;
+          const logoX = (pageWidth - logoSize) / 2;
+          
+          doc.image(logoPath, logoX, logoY, {
+            width: logoSize,
+            height: logoSize,
+          });
+          logoAdded = true;
+          logoY = logoY + logoSize + 15; // Position for text after logo
+          break;
+        } catch (error) {
+          console.warn('Could not add logo to PDF:', error);
+        }
+      }
+    }
+
+    // Set Y position for header text
+    if (logoAdded) {
+      doc.y = logoY;
+    } else {
+      doc.y = 50; // Default position if no logo
+    }
+
     // Header
     doc.fontSize(16).font('Helvetica-Bold')
        .text('BARANGAY OFFICE', { align: 'center' });

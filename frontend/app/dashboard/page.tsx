@@ -58,45 +58,43 @@ export default function DashboardPage() {
 
   const { data: stats, isLoading: statsLoading } = useQuery('dashboard-stats', async () => {
     const [residents, households, documents, incidents, inventory] = await Promise.all([
-      api.get('/residents?limit=1'),
+      api.get('/residents?limit=10000'),
       api.get('/households?limit=1'),
       api.get('/documents?limit=1'),
       api.get('/incidents?limit=1'),
       api.get('/inventory?limit=1'),
     ])
+    const residentList = residents.data?.residents || []
+
+    const getAge = (dateOfBirth: string) => {
+      try {
+        return differenceInYears(new Date(), new Date(dateOfBirth))
+      } catch {
+        return 0
+      }
+    }
+
+    const teenagerCount = residentList.filter((resident: any) => {
+      const age = getAge(resident.dateOfBirth)
+      return age >= 13 && age <= 19
+    }).length
+
+    const youthCount = residentList.filter((resident: any) => {
+      const age = getAge(resident.dateOfBirth)
+      return age >= 15 && age <= 30
+    }).length
+
+    const pwdCount = residentList.filter((resident: any) => resident.isPWD).length
+
     return {
       residents: residents.data.pagination?.total || 0,
       households: households.data.pagination?.total || 0,
       documents: documents.data.pagination?.total || 0,
       incidents: incidents.data.pagination?.total || 0,
       inventory: inventory.data.pagination?.total || 0,
-    }
-  })
-
-  const { data: announcements } = useQuery('active-announcements', async () => {
-    try {
-      const { data } = await api.get('/announcements/active')
-      return data || []
-    } catch {
-      return []
-    }
-  })
-
-  const { data: recentDocuments } = useQuery('recent-documents', async () => {
-    try {
-      const { data } = await api.get('/documents?limit=5')
-      return data?.documents || []
-    } catch {
-      return []
-    }
-  })
-
-  const { data: recentIncidents } = useQuery('recent-incidents', async () => {
-    try {
-      const { data } = await api.get('/incidents?limit=5')
-      return data?.incidents || []
-    } catch {
-      return []
+      teenagers: teenagerCount,
+      youth: youthCount,
+      pwd: pwdCount,
     }
   })
 
@@ -483,6 +481,37 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {/* Resident Demographics Summary */}
+        <div className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-primary-300">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Resident Demographics</h2>
+              <Link href="/residents" className="text-xs font-semibold text-primary-600 flex items-center">
+                View Residents
+                <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Link href="/residents?teenager=true" className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 hover:bg-cyan-100 transition-colors">
+                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Teenagers</p>
+                <p className="mt-1 text-2xl font-bold text-cyan-900">{(stats?.teenagers || 0).toLocaleString()}</p>
+                <p className="text-xs text-cyan-700 mt-1">Age 13-19</p>
+              </Link>
+              <Link href="/residents?youth=true" className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 hover:bg-violet-100 transition-colors">
+                <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Youth</p>
+                <p className="mt-1 text-2xl font-bold text-violet-900">{(stats?.youth || 0).toLocaleString()}</p>
+                <p className="text-xs text-violet-700 mt-1">Age 15-30</p>
+              </Link>
+              <Link href="/residents?isPWD=true" className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-4 py-3 hover:bg-fuchsia-100 transition-colors">
+                <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-700">PWD</p>
+                <p className="mt-1 text-2xl font-bold text-fuchsia-900">{(stats?.pwd || 0).toLocaleString()}</p>
+                <p className="text-xs text-fuchsia-700 mt-1">Based on resident details</p>
+              </Link>
+            </div>
+          </div>
+          <div className="h-1 bg-gradient-to-r from-cyan-500 via-violet-500 to-fuchsia-500" />
+        </div>
+
         {/* Enhanced Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Activity Chart */}
@@ -586,161 +615,6 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Enhanced Recent Activity & Announcements */}
-        {user?.role !== 'BARANGAY_EVALUATOR' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Documents */}
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                </div>
-                Recent Documents
-              </h2>
-              <Link href="/documents" className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center group uppercase tracking-wide">
-                View all
-                <ArrowRight className="h-3.5 w-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <div className="space-y-2.5">
-              {recentDocuments && recentDocuments.length > 0 ? (
-                recentDocuments.map((doc: any) => (
-                  <Link
-                    key={doc.id}
-                    href={`/documents/${doc.id}`}
-                    className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg hover:bg-blue-50 border border-gray-200 hover:border-blue-300 transition-all duration-200 group"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-900 truncate">{doc.documentType.replace(/_/g, ' ')}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 group-hover:text-blue-700 truncate">
-                        {doc.resident?.firstName} {doc.resident?.lastName}
-                      </p>
-                    </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-blue-600">
-                        {format(new Date(doc.issuedDate), 'MMM d')}
-                      </p>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <div className="p-3 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                    <FileText className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-500 font-medium">No recent documents</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Incidents */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg mr-3">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                </div>
-                Recent Incidents
-              </h2>
-              <Link href="/incidents" className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center group uppercase tracking-wide">
-                View all
-                <ArrowRight className="h-3.5 w-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <div className="space-y-2.5">
-              {recentIncidents && recentIncidents.length > 0 ? (
-                recentIncidents.map((incident: any) => (
-                  <Link
-                    key={incident.id}
-                    href={`/incidents/${incident.id}`}
-                    className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg hover:bg-red-50 border border-gray-200 hover:border-red-300 transition-all duration-200 group"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded ${
-                          incident.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
-                          incident.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {incident.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 group-hover:text-red-700 truncate">
-                        {incident.complainant?.firstName} {incident.complainant?.lastName}
-                      </p>
-                    </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-red-600">
-                        {format(new Date(incident.incidentDate), 'MMM d')}
-                      </p>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <div className="p-3 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                    <AlertCircle className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-500 font-medium">No recent incidents</p>
-                </div>
-              )}
-            </div>
-          </div>
-          </div>
-        )}
-
-        {/* Enhanced Announcements */}
-        {user?.role !== 'BARANGAY_EVALUATOR' && announcements && announcements.length > 0 && (
-          <div className="bg-gradient-to-br from-primary-50 via-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-primary-200">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-primary-200">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center">
-                <div className="p-2 bg-primary-600 rounded-lg mr-3">
-                  <Bell className="h-5 w-5 text-white" />
-                </div>
-                Announcements
-              </h2>
-              <Link href="/announcements" className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center group uppercase tracking-wide">
-                View all
-                <ArrowRight className="h-3.5 w-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {announcements.slice(0, 3).map((announcement: any) => (
-                <div 
-                  key={announcement.id} 
-                  className="bg-white rounded-lg p-4 border-l-4 border-primary-500 shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary-600"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-bold text-gray-900 text-sm">{announcement.title}</h3>
-                        {announcement.isPinned && (
-                          <span className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded">
-                            Pinned
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2.5">{announcement.content}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {format(new Date(announcement.createdAt), 'MMM d, yyyy')}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {format(new Date(announcement.createdAt), 'h:mm a')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Enhanced Quick Actions */}
         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">

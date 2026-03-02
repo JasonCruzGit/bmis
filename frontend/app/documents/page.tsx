@@ -29,6 +29,7 @@ import { useAuthStore } from '@/lib/store'
 export default function DocumentsPage() {
   const router = useRouter()
   const { hydrated, user } = useAuthStore()
+  const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
@@ -52,12 +53,17 @@ export default function DocumentsPage() {
       }
       const { data } = await api.get(`/documents?${params}`)
       return data
+    },
+    {
+      enabled: mounted && hydrated,
     }
   )
 
   const { data: documentTypes } = useQuery('document-types', async () => {
     const { data } = await api.get('/documents/types')
     return data?.types || []
+  }, {
+    enabled: mounted && hydrated,
   })
 
   const { data: stats } = useQuery('documents-stats', async () => {
@@ -65,7 +71,13 @@ export default function DocumentsPage() {
     return {
       total: data.pagination?.total || 0,
     }
+  }, {
+    enabled: mounted && hydrated,
   })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleViewDocument = (document: any) => {
     setSelectedDocument(document)
@@ -87,6 +99,40 @@ export default function DocumentsPage() {
       toast.success('PDF downloaded successfully')
     } catch (error: any) {
       toast.error('Failed to download PDF')
+    }
+  }
+
+  const handleExportDocuments = async () => {
+    try {
+      toast.loading('Exporting documents...')
+
+      const params = new URLSearchParams()
+      params.append('format', 'xlsx')
+
+      if (searchQuery) {
+        params.append('q', searchQuery)
+      }
+      if (typeFilter) {
+        params.append('type', typeFilter)
+      }
+
+      const response = await api.get(`/documents/export?${params.toString()}`, {
+        responseType: 'blob',
+      })
+
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `documents-report-${Date.now()}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+
+      toast.dismiss()
+      toast.success('Documents exported successfully')
+    } catch (error: any) {
+      toast.dismiss()
+      toast.error('Failed to export documents')
     }
   }
 
@@ -120,7 +166,7 @@ export default function DocumentsPage() {
     }
   }, [hydrated, user, router])
 
-  if (!hydrated) {
+  if (!mounted || !hydrated) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -210,7 +256,7 @@ export default function DocumentsPage() {
                   setSearchQuery(e.target.value)
                   setPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 placeholder:text-gray-500"
               />
             </div>
             <div className="flex gap-2">
@@ -225,7 +271,10 @@ export default function DocumentsPage() {
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </button>
-              <button className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+              <button
+                onClick={handleExportDocuments}
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </button>

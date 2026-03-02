@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "households" ADD COLUMN "condom" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "depo_injection" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "iud" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "tubal_ligation" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "pills" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "vasectomy" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "subdermal_implants" BOOLEAN NOT NULL DEFAULT false;
+
+

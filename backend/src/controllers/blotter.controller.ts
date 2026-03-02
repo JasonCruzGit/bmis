@@ -8,12 +8,32 @@ const prisma = new PrismaClient();
 
 export const getBlotterEntries = async (req: AuthRequest, res: Response) => {
   try {
-    const { page = '1', limit = '50', category, status, search } = req.query;
+    const { page = '1', limit = '50', category, status, search, residentType } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const user = req.user!;
 
     const where: any = {};
     if (category) where.category = category;
     if (status) where.status = status;
+    if (residentType === 'RESIDENT') {
+      where.resident = {
+        ...(where.resident || {}),
+        residencyStatus: 'RESIDENT'
+      };
+    } else if (residentType === 'NON_RESIDENT') {
+      where.resident = {
+        ...(where.resident || {}),
+        residencyStatus: 'INSTITUTIONAL_HOUSEHOLD'
+      };
+    }
+
+    if (user.role !== 'ADMIN') {
+      if (user.barangay) {
+        where.resident = { barangay: user.barangay };
+      } else {
+        where.id = '00000000-0000-0000-0000-000000000000';
+      }
+    }
     
     if (search) {
       where.OR = [
@@ -71,6 +91,7 @@ export const getBlotterEntries = async (req: AuthRequest, res: Response) => {
 export const getBlotterEntry = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
 
     const entry = await prisma.blotterEntry.findUnique({
       where: { id },
@@ -89,6 +110,10 @@ export const getBlotterEntry = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Blotter entry not found' });
     }
 
+    if (user.role !== 'ADMIN' && entry.resident.barangay !== user.barangay) {
+      return res.status(403).json({ message: 'You can only view blotter entries from your barangay' });
+    }
+
     res.json(entry);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -97,8 +122,12 @@ export const getBlotterEntry = async (req: AuthRequest, res: Response) => {
 
 export const createBlotterEntry = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user!;
     const {
       residentId,
+      residentType,
+      nonResidentName,
+      nonResidentAddress,
       category,
       narrative,
       incidentDate,
@@ -108,10 +137,56 @@ export const createBlotterEntry = async (req: AuthRequest, res: Response) => {
 
     const entryNumber = generateBlotterNumber();
 
+    let residentRecordId = residentId as string | undefined;
+    const isNonResident = residentType === 'NON_RESIDENT';
+
+    if (isNonResident) {
+      if (!nonResidentName || !String(nonResidentName).trim()) {
+        return res.status(400).json({ message: 'Non-resident name is required' });
+      }
+
+      const [firstName, ...lastNameParts] = String(nonResidentName).trim().split(/\s+/);
+      const lastName = lastNameParts.join(' ') || 'Unknown';
+      const assignedBarangay = user.role === 'ADMIN' ? null : user.barangay;
+      if (user.role !== 'ADMIN' && !assignedBarangay) {
+        return res.status(403).json({ message: 'Your account has no assigned barangay' });
+      }
+
+      const tempResident = await prisma.resident.create({
+        data: {
+          firstName,
+          lastName,
+          middleName: null,
+          suffix: null,
+          // Placeholder values required by schema for non-resident blotter entries
+          dateOfBirth: new Date('1970-01-01'),
+          sex: 'UNKNOWN',
+          civilStatus: 'SINGLE',
+          barangay: assignedBarangay,
+          address: (nonResidentAddress && String(nonResidentAddress).trim()) || 'Non-resident address not provided',
+          contactNo: 'N/A',
+          residencyStatus: 'INSTITUTIONAL_HOUSEHOLD',
+          isArchived: false,
+        },
+      });
+      residentRecordId = tempResident.id;
+    } else {
+      const resident = await prisma.resident.findUnique({
+        where: { id: residentId },
+        select: { id: true, barangay: true }
+      });
+      if (!resident) {
+        return res.status(404).json({ message: 'Resident not found' });
+      }
+      if (user.role !== 'ADMIN' && resident.barangay !== user.barangay) {
+        return res.status(403).json({ message: 'You can only create blotter entries for your barangay' });
+      }
+    }
+
     const entry = await prisma.blotterEntry.create({
       data: {
         entryNumber,
-        residentId,
+        residentId: residentRecordId!,
         category,
         narrative,
         incidentDate: new Date(incidentDate),
@@ -142,16 +217,28 @@ export const createBlotterEntry = async (req: AuthRequest, res: Response) => {
 export const updateBlotterEntry = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const user = req.user!;
     const updateData: any = { ...req.body };
 
     if (updateData.incidentDate) {
       updateData.incidentDate = new Date(updateData.incidentDate);
     }
 
-    const oldEntry = await prisma.blotterEntry.findUnique({ where: { id } });
+    const oldEntry = await prisma.blotterEntry.findUnique({
+      where: { id },
+      include: {
+        resident: {
+          select: { barangay: true }
+        }
+      }
+    });
     
     if (!oldEntry) {
       return res.status(404).json({ message: 'Blotter entry not found' });
+    }
+
+    if (user.role !== 'ADMIN' && oldEntry.resident.barangay !== user.barangay) {
+      return res.status(403).json({ message: 'You can only update blotter entries from your barangay' });
     }
 
     const entry = await prisma.blotterEntry.update({
@@ -184,6 +271,24 @@ export const updateBlotterStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const user = req.user!;
+
+    const existingEntry = await prisma.blotterEntry.findUnique({
+      where: { id },
+      include: {
+        resident: {
+          select: { barangay: true }
+        }
+      }
+    });
+
+    if (!existingEntry) {
+      return res.status(404).json({ message: 'Blotter entry not found' });
+    }
+
+    if (user.role !== 'ADMIN' && existingEntry.resident.barangay !== user.barangay) {
+      return res.status(403).json({ message: 'You can only update blotter entries from your barangay' });
+    }
 
     const entry = await prisma.blotterEntry.update({
       where: { id },
@@ -207,13 +312,38 @@ export const updateBlotterStatus = async (req: AuthRequest, res: Response) => {
 
 export const exportBlotterReport = async (req: AuthRequest, res: Response) => {
   try {
-    const { startDate, endDate, format = 'xlsx' } = req.query;
+    const { startDate, endDate, format = 'xlsx', category, status, residentType } = req.query;
+    const user = req.user!;
 
     const where: any = {};
     if (startDate || endDate) {
       where.incidentDate = {};
       if (startDate) where.incidentDate.gte = new Date(startDate as string);
       if (endDate) where.incidentDate.lte = new Date(endDate as string);
+    }
+    if (category) where.category = category;
+    if (status) where.status = status;
+    if (residentType === 'RESIDENT') {
+      where.resident = {
+        ...(where.resident || {}),
+        residencyStatus: 'RESIDENT'
+      };
+    } else if (residentType === 'NON_RESIDENT') {
+      where.resident = {
+        ...(where.resident || {}),
+        residencyStatus: 'INSTITUTIONAL_HOUSEHOLD'
+      };
+    }
+
+    if (user.role !== 'ADMIN') {
+      if (user.barangay) {
+        where.resident = {
+          ...(where.resident || {}),
+          barangay: user.barangay
+        };
+      } else {
+        where.id = '00000000-0000-0000-0000-000000000000';
+      }
     }
 
     const entries = await prisma.blotterEntry.findMany({

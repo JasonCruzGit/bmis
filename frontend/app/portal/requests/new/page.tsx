@@ -5,8 +5,22 @@ import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import portalApi from '@/lib/portal-api'
 import toast from 'react-hot-toast'
-import { ArrowLeft, FileText, CheckCircle, CheckCircle2, Clock, CreditCard, FileCheck, Bell } from 'lucide-react'
+import { FileText, CheckCircle, Clock, CreditCard, FileCheck, Bell } from 'lucide-react'
 import Link from 'next/link'
+import PortalHeader from '@/components/PortalHeader'
+
+const PURPOSE_OPTIONS = [
+  'Employment Requirement',
+  'School Requirement',
+  'Scholarship Application',
+  'Financial Assistance',
+  'Loan Application',
+  'Government Benefit Requirement',
+  'Business Permit Requirement',
+  'Legal Documentation',
+  'Travel Requirement',
+  'Other',
+]
 
 export default function NewRequestPage() {
   const router = useRouter()
@@ -64,43 +78,26 @@ export default function NewRequestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Header */}
-      <header className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary-900 overflow-hidden">
-        {/* Geometric Background Elements */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 border-2 border-white rounded-full -mr-48 -mt-48"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 border border-white rounded-full -ml-32 -mb-32"></div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <PortalHeader />
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <Link
-            href="/portal/dashboard"
-            className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to Dashboard
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <FileText className="h-8 w-8 text-white" />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <FileText className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2 tracking-tight">
-                Request Document
-              </h1>
-              <p className="text-lg text-gray-300 font-light">
-                Submit a new document request to the barangay office
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">Request Document</h1>
+              <p className="text-sm text-gray-600 mt-1">Submit a new document request to the barangay office</p>
             </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 -mt-8">
         {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-xl border-2 border-gray-100 overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
             <h2 className="text-lg font-bold text-white">Document Request Form</h2>
           </div>
           <div className="p-8">
@@ -113,7 +110,7 @@ export default function NewRequestPage() {
                   required
                   value={formData.documentType}
                   onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
-                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium transition-all duration-200 bg-white"
                 >
                   <option value="">Select document type</option>
                   {documentTypes?.map((type: any) => (
@@ -128,13 +125,18 @@ export default function NewRequestPage() {
                 <label className="block text-sm font-bold text-gray-900 mb-3">
                   Purpose <span className="text-gray-500 font-normal">(Optional)</span>
                 </label>
-                <textarea
+                <select
                   value={formData.purpose}
                   onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  rows={5}
-                  placeholder="Please specify the purpose of this document..."
-                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 font-medium transition-all duration-200 resize-none"
-                />
+                  className="w-full px-4 py-3.5 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium transition-all duration-200 bg-white"
+                >
+                  <option value="">Select purpose (optional)</option>
+                  {PURPOSE_OPTIONS.map((purpose) => (
+                    <option key={purpose} value={purpose}>
+                      {purpose}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex gap-4 pt-6 border-t-2 border-gray-100">
@@ -147,7 +149,7 @@ export default function NewRequestPage() {
                 <button
                   type="submit"
                   disabled={createMutation.isLoading || !formData.documentType}
-                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transform hover:scale-[1.02] disabled:hover:scale-100"
+                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg transform hover:scale-[1.02] disabled:hover:scale-100"
                 >
                   {createMutation.isLoading ? 'Submitting...' : 'Submit Request'}
                 </button>
@@ -157,10 +159,10 @@ export default function NewRequestPage() {
         </div>
 
         {/* Request Process Card */}
-        <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 border-b-2 border-primary-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-blue-200">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary-600 rounded-lg">
+              <div className="p-2 bg-blue-600 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-white" />
               </div>
               <h3 className="font-bold text-gray-900 text-lg">Request Process</h3>
@@ -168,9 +170,9 @@ export default function NewRequestPage() {
           </div>
           <div className="p-6">
             <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
-                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
-                  <FileCheck className="h-5 w-5 text-primary-600" />
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <FileCheck className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 mb-1">Review Stage</h4>
@@ -178,9 +180,9 @@ export default function NewRequestPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
-                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
-                  <Bell className="h-5 w-5 text-primary-600" />
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Bell className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 mb-1">Notification</h4>
@@ -188,23 +190,23 @@ export default function NewRequestPage() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
-                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
-                  <CreditCard className="h-5 w-5 text-primary-600" />
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 mb-1">Payment</h4>
-                  <p className="text-sm text-gray-600">If approved, you can pay the required fees online</p>
+                  <p className="text-sm text-gray-600">If approved, payment must be made over the counter at the barangay hall office</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-primary-500">
-                <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
-                  <FileText className="h-5 w-5 text-primary-600" />
+              <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl border-l-4 border-blue-500">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <FileText className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 mb-1">Processing</h4>
-                  <p className="text-sm text-gray-600">Once payment is confirmed, your document will be processed</p>
+                  <p className="text-sm text-gray-600">Once payment is received at the barangay office, your document will be processed</p>
                 </div>
               </div>
             </div>

@@ -148,7 +148,7 @@ export default function EditInventoryPage() {
                   onChange={handleInputChange}
                   required
                   placeholder="e.g., Office Chair, First Aid Kit"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -162,7 +162,7 @@ export default function EditInventoryPage() {
                   onChange={handleInputChange}
                   required
                   placeholder="e.g., Furniture, Medical Supplies, Equipment"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
               <div>
@@ -174,7 +174,7 @@ export default function EditInventoryPage() {
                   value={formData.unit}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 >
                   <option value="pcs">Pieces (pcs)</option>
                   <option value="box">Box</option>
@@ -197,7 +197,7 @@ export default function EditInventoryPage() {
                   required
                   min="0"
                   placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Use inventory logs to track quantity changes
@@ -214,7 +214,7 @@ export default function EditInventoryPage() {
                   onChange={handleInputChange}
                   min="0"
                   placeholder="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Alert when stock falls below this level
@@ -230,7 +230,7 @@ export default function EditInventoryPage() {
                   value={formData.location}
                   onChange={handleInputChange}
                   placeholder="e.g., Storage Room A, Office"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900"
                 />
               </div>
             </div>

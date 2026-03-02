@@ -215,7 +215,7 @@ export default function NewDocumentPage() {
                   value={formData.documentType}
                   onChange={handleTypeChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 >
                   <option value="">Select document type...</option>
                   {documentTypes?.map((type: any) => (
@@ -235,7 +235,7 @@ export default function NewDocumentPage() {
                   value={formData.purpose}
                   onChange={handleInputChange}
                   placeholder="e.g., For scholarship application"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white text-gray-900"
                 />
               </div>
             </div>

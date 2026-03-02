@@ -4,30 +4,39 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
 import portalApi from '@/lib/portal-api'
-import { ArrowLeft, Bell, Pin, Calendar, FileText } from 'lucide-react'
+import { Bell, Pin, Calendar, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { getFileUrl } from '@/lib/utils'
+import PortalHeader from '@/components/PortalHeader'
 
 export default function AnnouncementsPage() {
   const router = useRouter()
   const [page, setPage] = useState(1)
+  const [resident, setResident] = useState<any>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('portal_token')
-      if (!token) {
+      const residentData = localStorage.getItem('portal_resident')
+      
+      if (!token || !residentData) {
         router.push('/portal/login')
+        return
       }
+
+      setResident(JSON.parse(residentData))
     }
   }, [router])
 
   const { data: announcementsData, isLoading } = useQuery(
-    ['public-announcements', page],
+    ['public-announcements', page, resident?.barangay],
     async () => {
-      const { data } = await portalApi.get(`/announcements?page=${page}&limit=10`)
+      const barangayParam = resident?.barangay ? `&barangay=${encodeURIComponent(resident.barangay)}` : ''
+      const { data } = await portalApi.get(`/announcements?page=${page}&limit=10${barangayParam}`)
       return data
-    }
+    },
+    { enabled: !!resident }
   )
 
   const announcements = announcementsData?.announcements || []
@@ -35,7 +44,7 @@ export default function AnnouncementsPage() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'URGENT':
+      case 'EMERGENCY':
         return 'bg-red-100 text-red-800 border-red-300'
       case 'EVENT':
         return 'bg-green-100 text-green-800 border-green-300'
@@ -48,43 +57,25 @@ export default function AnnouncementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Header */}
-      <header className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary-900 overflow-hidden">
-        {/* Geometric Background Elements */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-96 h-96 border-2 border-white rounded-full -mr-48 -mt-48"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 border border-white rounded-full -ml-32 -mb-32"></div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <PortalHeader />
 
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <Link
-            href="/portal/dashboard"
-            className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to Dashboard
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <Bell className="h-8 w-8 text-white" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Bell className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-2 tracking-tight">
-                Barangay Announcements
-              </h1>
-              <p className="text-lg text-gray-300 font-light">
-                Stay informed about barangay events, programs, and important notices
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">Barangay Announcements</h1>
+              <p className="text-sm text-gray-600 mt-1">Stay informed about barangay events, programs, and important notices</p>
             </div>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 -mt-8">
         {isLoading ? (
-          <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 p-16 text-center">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-16 text-center">
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-amber-200 border-t-amber-600"></div>
             <p className="mt-4 text-gray-600 font-medium">Loading announcements...</p>
           </div>
         ) : announcements.length > 0 ? (
@@ -92,8 +83,8 @@ export default function AnnouncementsPage() {
             {announcements.map((announcement: any) => (
               <div
                 key={announcement.id}
-                className={`bg-white rounded-xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 ${
-                  announcement.isPinned ? 'border-amber-400 bg-gradient-to-br from-amber-50/50 to-white' : 'border-gray-100'
+                className={`bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl transform hover:-translate-y-1 ${
+                  announcement.isPinned ? 'border-amber-400 bg-gradient-to-br from-amber-50/80 to-white/80' : 'border-gray-200'
                 } overflow-hidden`}
               >
                 {announcement.isPinned && (
@@ -162,18 +153,18 @@ export default function AnnouncementsPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-lg border-2 border-gray-100 p-16 text-center">
-            <div className="p-4 bg-gray-100 rounded-full w-fit mx-auto mb-6">
-              <Bell className="h-12 w-12 text-gray-400" />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-16 text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Bell className="h-8 w-8 text-amber-600" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">No announcements</h3>
-            <p className="text-gray-600 text-lg">There are no announcements at this time.</p>
+            <p className="text-gray-600">There are no announcements at this time.</p>
           </div>
         )}
 
         {/* Pagination */}
         {pagination && pagination.total > 0 && (
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between bg-white rounded-xl shadow-lg border-2 border-gray-100 p-6 gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6 gap-4">
             <div className="text-sm font-medium text-gray-700">
               Showing <span className="font-bold text-gray-900">{pagination.page * pagination.limit - pagination.limit + 1}</span> to{' '}
               <span className="font-bold text-gray-900">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{' '}

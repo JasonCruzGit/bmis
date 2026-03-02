@@ -28,25 +28,7 @@ export default function PublicResidentPage() {
     const fetchResident = async () => {
       try {
         setLoading(true)
-        // Use the QR code endpoint to get resident by QR code (public, no auth required)
-        // Determine API URL based on current hostname
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL
-        
-        if (!apiUrl && typeof window !== 'undefined') {
-          // If on production domain, use production backend
-          if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('frontend-blush-chi-30')) {
-            // Use your production backend URL here
-            apiUrl = 'https://your-backend-render-url.onrender.com/api'
-          } else {
-            apiUrl = 'http://localhost:5001/api'
-          }
-        }
-        
-        if (!apiUrl) {
-          apiUrl = 'http://localhost:5001/api'
-        }
-        
-        const response = await fetch(`${apiUrl}/residents/qr/${residentId}`, {
+        const response = await fetch(`/api/public/residents/qr/${residentId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -83,12 +65,9 @@ export default function PublicResidentPage() {
     let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || ''
     
     if (!apiBaseUrl && typeof window !== 'undefined') {
-      if (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('frontend-blush-chi-30')) {
-        // Production - you need to set your Render backend URL here
-        apiBaseUrl = 'https://your-backend-render-url.onrender.com'
-      } else {
-        apiBaseUrl = 'http://localhost:5001'
-      }
+      const protocol = window.location.protocol
+      const hostname = window.location.hostname
+      apiBaseUrl = `${protocol}//${hostname}:5001`
     }
     
     return `${apiBaseUrl}${filePath}`

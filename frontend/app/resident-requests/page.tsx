@@ -106,12 +106,13 @@ export default function ResidentRequestsPage() {
 
   // Update request status mutation
   const updateRequestMutation = useMutation(
-    async ({ id, status, notes, rejectedReason, fee }: any) => {
+    async ({ id, status, notes, rejectedReason, fee, paymentStatus }: any) => {
       const { data } = await api.put(`/resident-requests/document-requests/${id}`, {
         status,
         notes,
         rejectedReason,
         fee,
+        paymentStatus,
       })
       return data
     },
@@ -444,6 +445,7 @@ function RequestUpdateModal({
   const [notes, setNotes] = useState('')
   const [rejectedReason, setRejectedReason] = useState('')
   const [fee, setFee] = useState(request.fee?.toString() || '')
+  const [paymentStatus, setPaymentStatus] = useState(request.paymentStatus)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -452,6 +454,7 @@ function RequestUpdateModal({
       notes: notes || undefined,
       rejectedReason: rejectedReason || undefined,
       fee: fee ? parseFloat(fee) : undefined,
+      paymentStatus: paymentStatus || undefined,
     })
   }
 
@@ -484,7 +487,7 @@ function RequestUpdateModal({
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
             >
               <option value="PENDING">Pending</option>
               <option value="APPROVED">Approved</option>
@@ -502,8 +505,23 @@ function RequestUpdateModal({
               step="0.01"
               value={fee}
               onChange={(e) => setFee(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
+              placeholder="Enter fee amount"
             />
+            <p className="mt-1 text-xs text-gray-500">Payment must be made over the counter at the barangay hall office</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+            <select
+              value={paymentStatus}
+              onChange={(e) => setPaymentStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
+            >
+              <option value="UNPAID">Unpaid</option>
+              <option value="PAID">Paid (Over the Counter)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Mark as "Paid" when payment is received at the barangay hall office</p>
           </div>
 
           <div>
@@ -512,7 +530,7 @@ function RequestUpdateModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
             />
           </div>
 
@@ -524,7 +542,7 @@ function RequestUpdateModal({
                 onChange={(e) => setRejectedReason(e.target.value)}
                 required
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-gray-900 bg-white"
               />
             </div>
           )}

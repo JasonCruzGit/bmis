@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from 'react-query'
 import portalApi from '@/lib/portal-api'
-import { ArrowLeft, MessageSquare, Clock, CheckCircle, XCircle, AlertCircle, Filter, Plus } from 'lucide-react'
+import { MessageSquare, Clock, CheckCircle, AlertCircle, Filter, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import PortalHeader from '@/components/PortalHeader'
 
 export default function ComplaintsPage() {
   const router = useRouter()
@@ -96,16 +97,12 @@ export default function ComplaintsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link
-            href="/portal/dashboard"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 font-medium"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
-          <div className="flex items-center justify-between">
+      <PortalHeader />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Complaints</h1>
               <p className="text-sm text-gray-600 mt-1">Track the status of your submitted complaints</p>
@@ -119,9 +116,6 @@ export default function ComplaintsPage() {
             </Link>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filter */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-5 mb-6">
           <div className="flex items-center gap-4">
@@ -132,7 +126,7 @@ export default function ComplaintsPage() {
                 setStatusFilter(e.target.value)
                 setPage(1)
               }}
-              className="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 bg-white"
+              className="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-900 bg-white"
             >
               <option value="">All Status</option>
               <option value="PENDING">Pending</option>
@@ -264,4 +258,6 @@ export default function ComplaintsPage() {
     </div>
   )
 }
+
+
 
