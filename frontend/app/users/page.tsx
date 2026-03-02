@@ -243,6 +243,7 @@ export default function UsersPage() {
                   firstName: '',
                   lastName: '',
                   role: 'STAFF',
+                  barangay: '',
                   isActive: true,
                 })
                 setShowAddModal(true)

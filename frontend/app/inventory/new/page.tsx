@@ -254,7 +254,7 @@ export default function NewInventoryPage() {
                     </button>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Selected: <span className="font-medium">{photo.name}</span>
+                    Selected: <span className="font-medium">{photo?.name || 'captured-image.jpg'}</span>
                   </p>
                 </div>
               ) : (
